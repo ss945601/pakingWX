@@ -1,0 +1,31 @@
+<!--pages/scan/scan.wxml-->
+<scroll-view>
+<!-- <view class='scan_view'>
+  <view class="result">
+    <text class="result_text">蓝牙状态监听：{{bleStatus}}</text>
+    <text class="result_text">蓝牙初始化：{{bleAdapterStatus}}</text>
+    <text class="result_text">当前连接的设备：{{bleChipInfo.name}}-{{bleChipInfo.deviceId}}</text>
+  </view>
+  <button type='primary' class='btn_scan' bindtap='
+  
+  ssonScanClick'>扫描</button>
+  <text class='.scan_result_title'>扫描结果</text>
+  
+  <view wx:if="{{!bleConnSuccess}}" class='scan_result' wx:for="{{bleChips}}">
+     <text class="result_text">{{index}}-[{{item.RSSI}}]-{{item.deviceId}}</text>
+     <button bindtap='onConnBle' data-item='{{item}}'>连接</button>
+  </view>
+  <web-view src="https://wapi.pakingtek.com/Dev/api.html"></web-view>
+   <view wx:if="{{!bleConnSuccess}}" class='scan_result' wx:for="{{callBack}}" wx:key="*this">
+     <text class="result_text">[{{item.num}}]-{{item.time}}</text>
+  </view>
+
+  <view wx:if="{{bleConnSuccess}}" class='notify_result'>
+  <text>notify data: </text>
+  <text class='notify_result_data'>{{bleNotifyData}}</text>
+  </view>
+</view> -->
+<image class='scan' bindtouchstart='touchListener' bindtouchmove='touchListener' bindtouchend='touchListener' width="100%" height="100%" mode="widthFix" src="{{svg}}"></image>
+<!-- <view style="background:url(\"data:image/svg+xml, %3Csvg height='24' width='24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z'/%3E%3C/svg%3E\");width:100rpx;height:100rpx;background-size: contain"></view> -->
+<!-- <text>{{svg}}</text> -->
+</scroll-view>
