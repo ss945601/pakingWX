@@ -1,5 +1,6 @@
 // pages/scan/scan.js
 var SVG = require('../../utils/svg');
+var Naivation = require('../../utils/navigation');
 var svg;
 
 Page({
@@ -64,8 +65,8 @@ Page({
     let arr = []
     wx.onBluetoothDeviceFound(function (res) {
       let devices = res.devices
-      // console.log(devices)
-
+      console.log(devices)
+      nav = new Naivation.IndoorFindSpace(devices);
       
 
       let new_time = new Date().getTime()
