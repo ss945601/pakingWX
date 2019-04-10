@@ -1,8 +1,8 @@
 // pages/scan/scan.js
 var SVG = require('../../utils/svg');
-var Naivation = require('../../utils/navigation');
+var Navivation = require('../../utils/navigation');
 var svg;
-
+var nav;
 Page({
 
   /**
@@ -65,9 +65,8 @@ Page({
     let arr = []
     wx.onBluetoothDeviceFound(function (res) {
       let devices = res.devices
-      console.log(devices)
-      nav = new Naivation.IndoorFindSpace(devices);
-      
+      //console.log(devices)
+      nav.startIndoorNavigation(devices);      
 
       let new_time = new Date().getTime()
       let now_time = new Date().getHours() + ":" + new Date().getMinutes() + ":" + new Date().getSeconds() + "." + new Date().getMilliseconds()
@@ -123,10 +122,11 @@ Page({
    */
   bleInit:function(){
     console.log('初始化蓝牙')
-
+    nav = new Navivation.IndoorFindSpace();
     let self = this
     wx.openBluetoothAdapter({
       success: function(res) {
+        self.bleDisCovery()
         self.setData({
           bleAdapterStatus: "初始化成功"
         })
@@ -323,6 +323,7 @@ Page({
         let svg_xml = fileManager.readFileSync(tempFilePath, 'utf-8');
         // console.log(svg_xml);
         svg = new SVG.SVGParser(svg_xml);
+        
         self.setData({
           svg: "data:image/svg+xml;base64," + svg.getBase64Encode()
         });
