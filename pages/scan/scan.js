@@ -123,8 +123,6 @@ Page({
   bleInit:function(){
     console.log('初始化蓝牙')
     nav = new Navivation.IndoorFindSpace()
-    nav.test()
-  
     let self = this
     wx.openBluetoothAdapter({
       success: function(res) {

@@ -23,6 +23,7 @@ export class getDataFromDB {
           console.log('success');
           res = data.response;
           nav.setSensorData(res);
+          console.log(res);
         } else {
           console.log(error.data.response);
         }
