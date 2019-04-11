@@ -1,3 +1,8 @@
+/**
+ * 戴克斯特拉 最短路徑演算法
+ * @author chieh
+ * @version 2019/04/11
+ */
 var PriorityQueue = require('priorityQueue.js')
 export class DijkstraAlgorithm {
   constructor(graph) {
@@ -38,5 +43,23 @@ export class DijkstraAlgorithm {
     }
 
     return path
+  }
+  changeCost(startNode, endNode, cost){
+    if (objcontain(this.adjacencyList,startNode)){
+      this.adjacencyList[startNode].forEach(function(item){
+        if(item.node==endNode){
+          item.weight = cost
+          }})
+    }
+  }
+  resetCost(){
+    for (var propertyName in this.adjacencyList) {
+      this.adjacencyList[propertyName].forEach(function (item) {
+          item.weight = 1
+      })
+    }
+  }
 }
+function objcontain(object, key) {
+  return object ? hasOwnProperty.call(object, key) : false;
 }

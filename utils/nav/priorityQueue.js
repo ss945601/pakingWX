@@ -1,3 +1,8 @@
+/**
+ * 
+ * @author chieh
+ * @version 2019/04/11
+ */
 export class PriorityQueue {
   constructor() {
     this.collection = [];
