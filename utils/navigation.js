@@ -1,24 +1,58 @@
+
 var SVG = require('svg');
-var Graph = require('nav/graph.js')
-var Dijkstra = require('nav/dijkstraAlgorithm.js')
+var Graph = require('graph/graph.js')
+var Dijkstra = require('graph/dijkstraAlgorithm.js')
 var svg;
+var sensorData;
+var DbRequest = require('../utils/model');
+var navQueue;
+var callbackCount;
+const FIRST_N_QSIZE = 30;
+export class SensorData{
+  constructor() {
+  }
+  setSensorData(value) {
+    sensorData = value;
+  }
+}
 export class IndoorFindSpace {
   /**
    * 初始化設定
    * @author Steven
    * @version 2019-04-03
    */
+
   constructor() {
     this.init();
+    this.initSensorInfo();
   }
   init() {
-    console.log('初始化室內導航');
+    navQueue = new Array();
+    callbackCount = 0;
+    console.log('====初始化室內導航====');
   }
-  startIndoorNavigation(ble) {   
-      var name = ble[0].name;
-      var rssi = ble[0].RSSI;
-      console.log(name, rssi);    
-
+  initSensorInfo() {
+    var res = new DbRequest.getDataFromDB();
+    res.floorSensorHttpRequest("000001");
+  }
+  startIndoorNavigation(ble) {  
+    this.addBle2Queue(navQueue,ble); 
+    if (sensorData){
+      console.log(sensorData);
+    }
+  }
+  addBle2Queue(queue, ble) {
+    var name = ble[0].name;
+    var rssi = ble[0].RSSI;
+    var bleSet = new Array();
+    if (name.length > 0) {
+      bleSet.push(name);
+      bleSet.push(rssi);
+      queue.unshift(bleSet);
+    }
+    if (queue.length > FIRST_N_QSIZE) {
+      queue.pop();
+    }
   }
   test(){
     let map = new Graph.Graph()
@@ -38,7 +72,8 @@ export class IndoorFindSpace {
     console.log(dij.findPathWithDijkstra("1","6"))
   }
 
-
 } 
 export const startIndoorNavigation = IndoorFindSpace.prototype.startIndoorNavigation;
+
+export const setSensorData = SensorData.prototype.setSensorData;
 
