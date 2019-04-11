@@ -6,6 +6,7 @@ export class getDataFromDB {
   floorSensorHttpRequest(garageID) {
     let self = this;
     var res = ""; 
+    var nav = new Navigation.SensorData();
     wx.request({
       url: "http://000001RD.pakingtek.com/Local/local.php?page=get_floor_sensor_data_test",
       method: "post",
@@ -21,6 +22,7 @@ export class getDataFromDB {
         if (data.status == "success") {
           console.log('success');
           res = data.response;
+          nav.setSensorData(res);
         } else {
           console.log(error.data.response);
         }

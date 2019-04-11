@@ -3,12 +3,18 @@ var SVG = require('svg');
 var Graph = require('graph/graph.js')
 var Dijkstra = require('graph/dijkstraAlgorithm.js')
 var svg;
-
+var sensorData;
 var DbRequest = require('../utils/model');
 var navQueue;
 var callbackCount;
 const FIRST_N_QSIZE = 30;
-
+export class SensorData{
+  constructor() {
+  }
+  setSensorData(value) {
+    sensorData = value;
+  }
+}
 export class IndoorFindSpace {
   /**
    * 初始化設定
@@ -20,11 +26,6 @@ export class IndoorFindSpace {
     this.init();
     this.initSensorInfo();
   }
-
-  setSensorData(value){
-    this.sensorData = value;
-  }
-
   init() {
     navQueue = new Array();
     callbackCount = 0;
@@ -34,8 +35,11 @@ export class IndoorFindSpace {
     var res = new DbRequest.getDataFromDB();
     res.floorSensorHttpRequest("000001");
   }
-  startIndoorNavigation(ble) { 
+  startIndoorNavigation(ble) {  
     this.addBle2Queue(navQueue,ble); 
+    if (sensorData){
+      console.log(sensorData);
+    }
   }
   addBle2Queue(queue, ble) {
     var name = ble[0].name;
@@ -49,12 +53,6 @@ export class IndoorFindSpace {
     if (queue.length > FIRST_N_QSIZE) {
       queue.pop();
     }
-  }
-  startIndoorNavigation(ble) {   
-      var name = ble[0].name;
-      var rssi = ble[0].RSSI;
-      console.log(name, rssi);    
-
   }
   test(){
     let map = new Graph.Graph()
@@ -77,5 +75,5 @@ export class IndoorFindSpace {
 } 
 export const startIndoorNavigation = IndoorFindSpace.prototype.startIndoorNavigation;
 
-
+export const setSensorData = SensorData.prototype.setSensorData;
 
