@@ -9,6 +9,8 @@ export class DijkstraAlgorithm {
     this.nodes = graph.nodes
     this.adjacencyList = graph.adjacencyList
   }
+  getNodes(){return this.nodes}
+  getEdge(){return this.adjacencyList}
   findPathWithDijkstra(startNode, endNode) {
     let times = {};
     let backtrace = {};
@@ -45,7 +47,7 @@ export class DijkstraAlgorithm {
     return path
   }
   changeCost(startNode, endNode, cost){
-    if (objcontain(this.adjacencyList,startNode)){
+    if (objcontainKey(this.adjacencyList,startNode)){
       this.adjacencyList[startNode].forEach(function(item){
         if(item.node==endNode){
           item.weight = cost
@@ -60,6 +62,6 @@ export class DijkstraAlgorithm {
     }
   }
 }
-function objcontain(object, key) {
+function objcontainKey(object, key) {
   return object ? hasOwnProperty.call(object, key) : false;
 }
