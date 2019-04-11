@@ -1,25 +1,15 @@
 var SVG = require('svg');
 var Graph = require('graph/graph.js')
 var Dijkstra = require('graph/dijkstraAlgorithm.js')
+var SensorDataModel = require('model/sensorDataModel.js')
 var svg;
+var sdm;
 var sensorData;
-var DbRequest = require('../utils/model');
 var navQueue;
 var callbackCount;
 const FIRST_N_QSIZE = 30;
  
 
-export class SensorData {
-  /**
-   * 初始化設定
-   * @author Steven
-   * @version 2019-04-11
-   */
-  constructor() {}
-  setSensorData(value) {
-    sensorData = value;
-  }
-}
 export class IndoorFindSpace {
   /**
    * 初始化設定
@@ -29,56 +19,45 @@ export class IndoorFindSpace {
 
   constructor() {
     this.init();
-    this.initSensorInfo();
-    this.checkVariable();
+    this.initMapGraph();
   } 
   init() {
     navQueue = new Array();
-    callbackCount = 0;
+    callbackCount = 0; 
     console.log('====初始化室內導航====');
   }
-  initSensorInfo() {
-    var res = new DbRequest.getDataFromDB();
-    res.floorSensorHttpRequest("000001");
-  }
-  checkVariable(){
-    console.log(sensorData);
+  initMapGraph(){  
+    SensorDataModel.sensorInfo.init();
+    sensorData = SensorDataModel.sensorInfo.Data;
     if (sensorData !== undefined) {
-      this.initMapGraph();
+      console.log('取得場內資訊');
+      console.log(sensorData);
+      this.buildMapGraph();
     }else{
       var pointer = this;
       setTimeout(function () {
-        pointer.checkVariable();
+        pointer.initMapGraph();
       }, 2000);
     }
   }
-  initMapGraph() {
-    var graphMap = [];
+  buildMapGraph() {
+    var graphList = [];
     var isUpdateMap = false;
-    let map = new Graph.Graph()
     for (var i = 0; sensorData[i]; i++) {
-      if (!graphMap[sensorData[i].floor]) {
-        graphMap[sensorData[i].floor] = new Array();
-        console.log(graphMap);
+      if (!graphList[sensorData[i].floor]) {
+        graphList[sensorData[i].floor] = new Graph.Graph();
+      }
+      if (graphList[sensorData[i].floor]){
+        graphList[sensorData[i].floor].addNode(sensorData[i].seq_id);
+        graphList[sensorData[i].floor].addEdge(sensorData[i].seq_id, sensorData[i].Next_N,1);
       }
     }
-    map.addNode(1)
-    map.addNode(2)
-    map.addNode(3)
-    map.addNode(4)
-    map.addNode(5)
-    map.addNode(7)
-    map.addEdge(1, 2, 1);
-    map.addEdge(1, 5, 1);
-    map.addEdge(2, 3, 1);
-    map.addEdge(3, 4, 1);
-    map.addEdge(4, 5, 1);
-    map.addEdge(5, 7, 1);
-    map.addEdge(7, 1, 1);
-    let dij = new Dijkstra.DijkstraAlgorithm(map)
-    console.log(dij.findPathWithDijkstra(1, 7))
-    console.log(map.getEdge())
-    dij.changeCost(1, 3, 3);
+    console.log('建立有向圖');
+    console.log(graphList);
+    // let dij = new Dijkstra.DijkstraAlgorithm(map)
+    // console.log(dij.findPathWithDijkstra(1, 7))
+    // console.log(map.getEdge())
+    // dij.changeCost(1, 3, 3);
   }
   startIndoorNavigation(ble) {
     this.addBle2Queue(navQueue, ble);
@@ -99,6 +78,3 @@ export class IndoorFindSpace {
   }
 }
 
-
-export const startIndoorNavigation = IndoorFindSpace.prototype.startIndoorNavigation;
-export const setSensorData = SensorData.prototype.setSensorData;

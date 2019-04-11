@@ -1,4 +1,4 @@
-var Navigation = require('../utils/navigation');
+var SensorDataModel = require('model/sensorDataModel.js')
 export class getDataFromDB {
   constructor() {
    
@@ -6,7 +6,6 @@ export class getDataFromDB {
   floorSensorHttpRequest(garageID) {
     let self = this;
     var res = ""; 
-    var nav = new Navigation.SensorData();
     wx.request({
       url: "http://000001RD.pakingtek.com/Local/local.php?page=get_floor_sensor_data_test",
       method: "post",
@@ -19,11 +18,9 @@ export class getDataFromDB {
       success: function({
         data
       }) {
-        if (data.status == "success") {
-          console.log('success');
+        if (data.status == "success" ) {
           res = data.response;
-          nav.setSensorData(res);
-          console.log(res);
+          SensorDataModel.sensorInfo.Data = res;          
         } else {
           console.log(error.data.response);
         }
@@ -41,4 +38,3 @@ export class getDataFromDB {
   }
 }
 
-export const floorSensorHttpRequest = getDataFromDB.prototype.floorSensorHttpRequest;

@@ -467,7 +467,7 @@ Page({
             svg: "data:image/svg+xml;base64," + svg.getBase64Encode()
           });
 
-          console.log("SVG", data.response);
+          //console.log("SVG", data.response);
         } else {
           console.log(error.data.response);
         }
