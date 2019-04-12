@@ -11,25 +11,16 @@ var graphList = [];
 var navHashMap = [];
 var navSeqHashMap = [];
 var nowFloor = '3F';
-var isInitDone = false;
+
 const FIRST_N_QSIZE = 30;
 
-
-export class IndoorFindSpace {
-  /**
-   * 初始化設定
-   * @author Steven
-   * @version 2019-04-11
-   */
-
+export class NavigationShareFunc {
   constructor() {
     this.init();
-    this.initMapGraph();
+    this.isLoadMap = false;
   }
-  init() {
-    navQueue = new Array();
-    callbackCount = 0;
-    console.log('====初始化室內導航====');
+  init(){
+    this.initMapGraph();
   }
   initMapGraph() {
     SensorDataModel.sensorInfo.init();
@@ -38,11 +29,11 @@ export class IndoorFindSpace {
       console.log('取得場內資訊');
       console.log(sensorData);
       this.buildMapGraph();
-      this.buildNavSeqHashMap()
-      isInitDone = true;
+      this.buildNavSeqHashMap();
+      this.isLoadMap = true;
     } else {
       var pointer = this;
-      setTimeout(function() {
+      setTimeout(function () {
         pointer.initMapGraph();
       }, 2000);
     }
@@ -58,7 +49,7 @@ export class IndoorFindSpace {
         for (var j = 0; next[j]; j++)
           graphList[sensorData[i].floor].addEdge(sensorData[i].seq_id, next[j], 1);
       }
-      var info={[sensorData[i].sensor_id]:sensorData[i]};
+      var info = { [sensorData[i].sensor_id]: sensorData[i] };
       navHashMap = Object.assign({}, navHashMap, info);
     }
     console.log('建立全域N字典');
@@ -70,7 +61,7 @@ export class IndoorFindSpace {
     // console.log(map.getEdge())
     // dij.changeCost(1, 3, 3);
   }
-  buildNavSeqHashMap(){
+  buildNavSeqHashMap() {
     for (var i = 0; sensorData[i]; i++) {
       var info = { [sensorData[i].sensor_id]: sensorData[i] };
       if (nowFloor == sensorData[i].floor) {
@@ -82,20 +73,10 @@ export class IndoorFindSpace {
     console.log(navSeqHashMap);
 
   }
-
-
-  startIndoorNavigation(ble) {
-    ble[0].name = '00:23:A7:A6:BB:A4';
-    if (isInitDone && !navHashMap[ble]) {
-      this.addBle2Queue(navQueue, ble);
-      this.sortQueue2HashMap(navQueue);
-    }
-  }
-
-  sortQueue2HashMap(queue){
+  sortQueue2HashMap(queue) {
     var dataset = new Array();
-    for ( var i = 0 ; queue[i]; i++ ){
-      dataset[queue[i].seqId] =dataset[queue[i].seqId] + queue[i].RSSI;
+    for (var i = 0; queue[i]; i++) {
+      dataset[queue[i].seqId] = dataset[queue[i].seqId] + queue[i].RSSI;
     }
     console.log(dataset)
   }
@@ -103,13 +84,43 @@ export class IndoorFindSpace {
   addBle2Queue(queue, ble) {
     var name = ble[0].name;
     var rssi = parseInt(ble[0].RSSI);
-    
+
     if (name.length > 0) {
-      var bleSet = {'seqId':navHashMap[name].seq_id, 'RSSI':rssi};
+      var bleSet = { 'seqId': navHashMap[name].seq_id, 'RSSI': rssi };
       queue.push(bleSet);
     }
     if (queue.length > FIRST_N_QSIZE) {
       queue.shift();
     }
   }
+  
+}
+
+
+export class IndoorFindSpace {
+  /**
+   * 初始化設定
+   * @author Steven
+   * @version 2019-04-11
+   */
+
+  constructor() {
+    this.navSharefunc = new NavigationShareFunc();
+    this.init();
+  }
+  init() {
+    navQueue = new Array();
+    callbackCount = 0;
+    console.log('====初始化室內導航====');
+  }
+  startIndoorNavigation(ble) {
+    console.log(ble);
+    var navshareFunc = this.navSharefunc;
+    if (navshareFunc.isLoadMap && navHashMap[ble]) {
+      navshareFunc.addBle2Queue(navQueue, ble);
+      navshareFunc.sortQueue2HashMap(navQueue);
+    }
+  }
+
+
 }
