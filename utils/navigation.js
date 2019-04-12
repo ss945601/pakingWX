@@ -10,7 +10,8 @@ var callbackCount;
 var graphList = [];
 var navHashMap = [];
 var navSeqHashMap = [];
-var nowFloor = '4F';
+var nowFloor = '3F';
+var isInitDone = false;
 const FIRST_N_QSIZE = 30;
 
 
@@ -38,6 +39,7 @@ export class IndoorFindSpace {
       console.log(sensorData);
       this.buildMapGraph();
       this.buildNavSeqHashMap()
+      isInitDone = true;
     } else {
       var pointer = this;
       setTimeout(function() {
@@ -83,22 +85,31 @@ export class IndoorFindSpace {
 
 
   startIndoorNavigation(ble) {
-    this.addBle2Queue(navQueue, ble);
-
+    ble[0].name = '00:23:A7:A6:BB:A4';
+    if (isInitDone && !navHashMap[ble]) {
+      this.addBle2Queue(navQueue, ble);
+      this.sortQueue2HashMap(navQueue);
+    }
   }
 
-  
+  sortQueue2HashMap(queue){
+    var dataset = new Array();
+    for ( var i = 0 ; queue[i]; i++ ){
+      dataset[queue[i].seqId] =dataset[queue[i].seqId] + queue[i].RSSI;
+    }
+    console.log(dataset)
+  }
+
   addBle2Queue(queue, ble) {
     var name = ble[0].name;
-    var rssi = ble[0].RSSI;
-    var bleSet = new Array();
+    var rssi = parseInt(ble[0].RSSI);
+    
     if (name.length > 0) {
-      bleSet.push(name);
-      bleSet.push(rssi);
-      queue.unshift(bleSet);
+      var bleSet = {'seqId':navHashMap[name].seq_id, 'RSSI':rssi};
+      queue.push(bleSet);
     }
     if (queue.length > FIRST_N_QSIZE) {
-      queue.pop();
+      queue.shift();
     }
   }
 }
