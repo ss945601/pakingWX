@@ -8,18 +8,18 @@ var navQueue;
 var floorQueue;
 var callbackCount;
 var graphList = [];
-var navHashMap = [];
-var navSeqHashMap = [];
-var nowFloor = '3F';
-
+var nowFloor = '4F';
+var ansNav;
 const FIRST_N_QSIZE = 30;
 
 export class NavigationShareFunc {
   constructor() {
     this.init();
     this.isLoadMap = false;
+    this.navHashMap = new Array();
+    this.navSeqHashMap = new Array();
   }
-  init(){
+  init() {
     this.initMapGraph();
   }
   initMapGraph() {
@@ -33,7 +33,7 @@ export class NavigationShareFunc {
       this.isLoadMap = true;
     } else {
       var pointer = this;
-      setTimeout(function () {
+      setTimeout(function() {
         pointer.initMapGraph();
       }, 2000);
     }
@@ -49,11 +49,13 @@ export class NavigationShareFunc {
         for (var j = 0; next[j]; j++)
           graphList[sensorData[i].floor].addEdge(sensorData[i].seq_id, next[j], 1);
       }
-      var info = { [sensorData[i].sensor_id]: sensorData[i] };
-      navHashMap = Object.assign({}, navHashMap, info);
+      var info = {
+        [sensorData[i].sensor_id]: sensorData[i]
+      };
+      this.navHashMap = Object.assign({}, this.navHashMap, info);
     }
     console.log('建立全域N字典');
-    console.log(navHashMap);
+    console.log(this.navHashMap);
     console.log('建立有向圖');
     console.log(graphList);
     // let dij = new Dijkstra.DijkstraAlgorithm(map)
@@ -63,37 +65,67 @@ export class NavigationShareFunc {
   }
   buildNavSeqHashMap() {
     for (var i = 0; sensorData[i]; i++) {
-      var info = { [sensorData[i].sensor_id]: sensorData[i] };
+      var info = {
+        [sensorData[i].sensor_id]: sensorData[i]
+      };
       if (nowFloor == sensorData[i].floor) {
-        var info = { [sensorData[i].seq_id]: sensorData[i] };
-        navSeqHashMap = Object.assign({}, navSeqHashMap, info);
+        var info = {
+          [sensorData[i].seq_id]: sensorData[i]
+        };
+        this.navSeqHashMap = Object.assign({}, this.navSeqHashMap, info);
       }
     }
     console.log('建立當前樓層N字典');
-    console.log(navSeqHashMap);
+    console.log(this.navSeqHashMap);
 
   }
-  sortQueue2HashMap(queue) {
-    var dataset = new Array();
-    for (var i = 0; queue[i]; i++) {
-      dataset[queue[i].seqId] = dataset[queue[i].seqId] + queue[i].RSSI;
-    }
-    console.log(dataset)
+  sortByKey(array, key) {
+    return array.sort(function (a, b) {
+      var y = a[key]; var x = b[key];
+      return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+    });
   }
-
+  mergeQueue2HashMap(queue) {
+    var output = [];
+    queue.forEach(function (item) {
+      var existing = output.filter(function (v, i) {
+        return v.seqId == item.seqId;
+      });
+      if (existing.length) {
+        var existingIndex = output.indexOf(existing[0]);
+        output[existingIndex].RSSI = parseInt(output[existingIndex].RSSI) + parseInt((item.RSSI));
+        output[existingIndex].callback = output[existingIndex].callback + 1;
+      } else {
+        item.RSSI = 0;
+        item.callback = 0;
+        output.push(item);
+      }
+    });
+    return output;
+  }
   addBle2Queue(queue, ble) {
     var name = ble[0].name;
-    var rssi = parseInt(ble[0].RSSI);
-
-    if (name.length > 0) {
-      var bleSet = { 'seqId': navHashMap[name].seq_id, 'RSSI': rssi };
-      queue.push(bleSet);
-    }
-    if (queue.length > FIRST_N_QSIZE) {
+    var rssi = (parseInt(ble[0].RSSI) + 100);
+    while (queue.length > FIRST_N_QSIZE) {
       queue.shift();
     }
+    if (name.length > 0) {
+      var bleSet = {
+        'seqId': this.navHashMap[name].seq_id,
+        'RSSI': rssi
+      };
+      queue.push(bleSet);
+    }
   }
-  
+  /**
+     * 取得timestemp和現在時間差
+     *
+     * @param timestemp
+     * @return double 時間差(秒)
+     */
+  getTimestempDiff(timestemp) {
+    return (Date.now() - timestemp) / 1000
+  }
 }
 
 
@@ -107,6 +139,9 @@ export class IndoorFindSpace {
   constructor() {
     this.navSharefunc = new NavigationShareFunc();
     this.init();
+    this.x = 0;
+    this.y = 0;
+    this.timeStamp = Date.now();
   }
   init() {
     navQueue = new Array();
@@ -114,11 +149,29 @@ export class IndoorFindSpace {
     console.log('====初始化室內導航====');
   }
   startIndoorNavigation(ble) {
-    console.log(ble);
     var navshareFunc = this.navSharefunc;
-    if (navshareFunc.isLoadMap && navHashMap[ble]) {
+    var testval = (parseInt(ble[0].RSSI) + 100) % 3;
+    ble[0].name = ble[0].name.replace(/\s+/g, '');
+    if (navshareFunc.isLoadMap && navshareFunc.navHashMap[ble[0].name]) {
+      if (navshareFunc.getTimestempDiff(this.timeStamp) > 1) {
+        console.log('每秒callback數'+callbackCount);
+        callbackCount = 1;
+        this.timeStamp = Date.now()
+      } else {
+        callbackCount++;
+      }
       navshareFunc.addBle2Queue(navQueue, ble);
-      navshareFunc.sortQueue2HashMap(navQueue);
+      var seqAndRssi = navshareFunc.mergeQueue2HashMap(navQueue);
+      seqAndRssi = navshareFunc.sortByKey(seqAndRssi,'RSSI');
+      if (navQueue.length >= 30) {
+        if (ansNav !== seqAndRssi[0].seqId) {
+          ansNav = seqAndRssi[0].seqId;
+          this.x = parseInt(navshareFunc.navSeqHashMap[ansNav].x)*1.1;
+          this.y = parseInt(navshareFunc.navSeqHashMap[ansNav].y)*1.1;
+          var svg = SVG.SVGParser
+          console.dir('CarNavigation:'+(ansNav));
+        }
+      }
     }
   }
 

@@ -80,7 +80,7 @@ Page({
 
         call_back = devices.length
         time = new_time
-        console.log(call_back + "_" + now_time)
+        //console.log(call_back + "_" + now_time)
       } else {
         call_back += devices.length
       }
@@ -460,8 +460,8 @@ Page({
             }
           }
           svg.setParkingSpaceStatus(ids, colors);
-
-          svg.setCarLocation(739, 1417);
+          if (nav.x != 0 && nav.y != 0)
+            svg.setCarLocation(nav.x, nav.y);
           // svg.setWalkerLocation(739, 1417);
           self.setData({
             svg: "data:image/svg+xml;base64," + svg.getBase64Encode()
