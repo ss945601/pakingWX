@@ -178,7 +178,7 @@ export class IndoorFindSpace {
     this.limitRSSI_Theshold = 0;
     this.once = true; // 第一次收
     this.isSwitchGetBle = false;
-    this.lastBle = '';
+    this.lastBle = '' ;
     this.timeStamp = Date.now();
     this.navSharefunc = new NavigationShareFunc();
     console.log('====初始化室內導航====');
@@ -221,15 +221,18 @@ export class IndoorFindSpace {
     // }
     ble[0].name = navshareFunc.stringRemoveSpace(ble[0].name); //去除空白
     var thres_rssi = (-100 + this.callbackCount / 4);
+
     if (parseInt(ble[0].RSSI) < thres_rssi) // rssi 太小
       return false;
     if (!navshareFunc.navHashMap[ble[0].name]) //非場內ble
       return false;
+    if (navshareFunc.navHashMap[ble[0].name].floor !== nowFloor) 
+      return false;
     if (this.isSwitchGetBle) { // 是否啟動交替收 
-      if (ble[0].name === this.lastBle[0].name) {
+      if (this.lastBle != '' && ble[0].name === this.lastBle) {
         return false;
       } else {
-        this.lastBle = ble;
+        this.lastBle = ble[0].name;
       }
     }
     return true;
