@@ -172,7 +172,7 @@ export class IndoorFindSpace {
       if (navQueue.length >= 30) {
         if (ansNav !== seqAndRssi[0].seqId) {
           ansNav = seqAndRssi[0].seqId;
-          updateCurrentNode(ansNav);
+          this.updateCurrentNode(ansNav);
           console.dir('Rank:', seqAndRssi);
         }
       }
