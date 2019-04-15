@@ -6,13 +6,16 @@ var svg;
 var sensorData;
 var navQueue;
 var floorQueue;
-var callbackCount;
 var graphList = [];
 var nowFloor = '4F';
-var ansNav;
-const FIRST_N_QSIZE = 30;
+const FIRST_LIMIT_QSIZE = 30;
 
 export class NavigationShareFunc {
+  /**
+   * 初始化設定
+   * @author Steven
+   * @version 2019-04-11
+   */
   constructor() {
     this.init();
   }
@@ -80,15 +83,16 @@ export class NavigationShareFunc {
 
   }
   sortByKey(array, key) {
-    return array.sort(function (a, b) {
-      var y = a[key]; var x = b[key];
+    return array.sort(function(a, b) {
+      var y = a[key];
+      var x = b[key];
       return ((x < y) ? -1 : ((x > y) ? 1 : 0));
     });
   }
   mergeQueue2HashMap(queue) {
     var output = [];
-    queue.forEach(function (item) {
-      var existing = output.filter(function (v, i) {
+    queue.forEach(function(item) {
+      var existing = output.filter(function(v, i) {
         return v.seqId == item.seqId;
       });
       if (existing.length) {
@@ -103,10 +107,10 @@ export class NavigationShareFunc {
     });
     return output;
   }
-  addBle2Queue(queue, ble) {
+  addBle2Queue(queue, ble, limit_qSize) {
     var name = ble[0].name;
     var rssi = (parseInt(ble[0].RSSI) + 100);
-    while (queue.length > FIRST_N_QSIZE) {
+    while (queue.length > limit_qSize) {
       queue.shift();
     }
     if (name.length > 0) {
@@ -118,11 +122,11 @@ export class NavigationShareFunc {
     }
   }
   /**
-     * 取得timestemp和現在時間差
-     *
-     * @param timestemp
-     * @return double 時間差(秒)
-     */
+   * 取得timestemp和現在時間差
+   *
+   * @param timestemp
+   * @return double 時間差(秒)
+   */
   getTimestempDiff(timestemp) {
     return (Date.now() - timestemp) / 1000
   }
@@ -136,46 +140,81 @@ export class IndoorFindSpace {
    * @version 2019-04-11
    */
 
-  constructor() {    
+  constructor() {
     this.init();
   }
   init() {
     navQueue = new Array();
-    callbackCount = 0;
+    this.callbackCount = 0;
     this.x = 0;
     this.y = 0;
+    this.ansNav='';
+    this.limitMaxQueueSize_Theshold = 0;
+    this.limitRSSI_Theshold = 0;
+    this.once = false;
     this.timeStamp = Date.now();
     this.navSharefunc = new NavigationShareFunc();
     console.log('====初始化室內導航====');
   }
-  updateCurrentNode(ansNav){
+  updateCurrentNode() {
     var navshareFunc = this.navSharefunc;
-    this.x = parseInt(navshareFunc.navSeqHashMap[ansNav].x) * 1.1;
-    this.y = parseInt(navshareFunc.navSeqHashMap[ansNav].y) * 1.1;
-    console.dir('CarNavigation:' + (ansNav));
+    this.x = parseInt(navshareFunc.navSeqHashMap[this.ansNav].x) * 1.1;
+    this.y = parseInt(navshareFunc.navSeqHashMap[this.ansNav].y) * 1.1;
+    console.dir('CarNavigation:' + (this.ansNav));
   }
+
+  parameterConfig(seqAndRssi) {
+    if (this.once == false) {
+      this.limitMaxQueueSize_Theshold = FIRST_LIMIT_QSIZE
+    } else {
+      this.limitMaxQueueSize_Theshold = 5 * seqAndRssi.length;
+      if (this.limitMaxQueueSize_Theshold <= 30) {
+        this.limitMaxQueueSize_Theshold = 30;
+      }
+      if (this.limitMaxQueueSize_Theshold >= 60) {
+        this.limitMaxQueueSize_Theshold = 60;
+      }
+      //console.log(this.limitMaxQueueSize_Theshold);
+    }
+  }
+
+  isNodeConditions(seqAndRssi){
+    if (this.ansNav !== seqAndRssi[0].seqId) { // 跳點對象(排行榜第一)和當前點不一樣
+      this.ansNav = seqAndRssi[0].seqId;
+      console.dir('CarNavigation:', this.ansNav);
+      return true;
+    }
+    return false;
+  }
+
   startIndoorNavigation(ble) {
     var navshareFunc = this.navSharefunc;
     var testval = (parseInt(ble[0].RSSI) + 100) % 3;
     ble[0].name = ble[0].name.replace(/\s+/g, '');
     if (navshareFunc.isLoadMap && navshareFunc.navHashMap[ble[0].name]) {
+      navshareFunc.addBle2Queue(navQueue, ble, this.limitMaxQueueSize_Theshold); // 將收到的ble塞進navQueue
+      var seqAndRssi = navshareFunc.mergeQueue2HashMap(navQueue);
+      seqAndRssi = navshareFunc.sortByKey(seqAndRssi, 'RSSI'); // sort navQueue named seqAndRssi(以能量排名)
+
+      /*根據每秒callback數量對參數做調整 */
       if (navshareFunc.getTimestempDiff(this.timeStamp) > 1) {
-        console.log('每秒callback數'+callbackCount);
-        callbackCount = 1;
+        this.parameterConfig(seqAndRssi); // 調整Node queue最大數量
+        console.log('每秒callback數' + this.callbackCount);
+        this.callbackCount = 1;
         this.timeStamp = Date.now()
       } else {
-        callbackCount++;
+        this.callbackCount++;
       }
-      navshareFunc.addBle2Queue(navQueue, ble);
-      var seqAndRssi = navshareFunc.mergeQueue2HashMap(navQueue);
-      seqAndRssi = navshareFunc.sortByKey(seqAndRssi,'RSSI');
-      if (navQueue.length >= 30) {
-        if (ansNav !== seqAndRssi[0].seqId) {
-          ansNav = seqAndRssi[0].seqId;
-          this.updateCurrentNode(ansNav);
+
+      /*跳點邏輯 */
+      if (navQueue.length >= this.limitMaxQueueSize_Theshold) {
+        if (this.isNodeConditions(seqAndRssi) == true) {
+          this.once = true;
+          this.updateCurrentNode();
           console.dir('Rank:', seqAndRssi);
         }
       }
+
     }
   }
 
