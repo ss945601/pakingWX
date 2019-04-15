@@ -478,7 +478,7 @@ Page({
       complete: function() {
         var timer = setTimeout(function () {
           self.parkingSpaceStatusHttpRequest();
-        }, 2000);
+        }, 500);
       }
     })
   }

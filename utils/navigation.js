@@ -121,6 +121,11 @@ export class NavigationShareFunc {
       queue.push(bleSet);
     }
   }
+
+  stringRemoveSpace(str) {
+    return str.replace(/\s+/g, '');
+  }
+
   /**
    * 取得timestemp和現在時間差
    *
@@ -130,6 +135,24 @@ export class NavigationShareFunc {
   getTimestempDiff(timestemp) {
     return (Date.now() - timestemp) / 1000
   }
+
+  /**
+   * 在array中根據Key找出有無包含value
+   * Array[[Key1:value1,Key2:value2],[Key1:value3,Key2:value4]]
+   * @author chieh
+   * @version 2019-04-15
+   */
+  arrayKeyContains(array, key, value) {
+    var isContains = false
+    array.some(item => {
+      if (item[key] == value) {
+        isContains = true
+        return true
+      }
+    })
+    return isContains
+  }
+
 }
 
 
@@ -148,26 +171,39 @@ export class IndoorFindSpace {
     this.callbackCount = 0;
     this.x = 0;
     this.y = 0;
-    this.ansNav='';
+    this.scale = 1.2;
+    this.ansNav = '';
+    this.lastNav = '';
     this.limitMaxQueueSize_Theshold = 0;
     this.limitRSSI_Theshold = 0;
-    this.once = false;
+    this.once = true; // 第一次收
+    this.isSwitchGetBle = false;
+    this.lastBle = '';
     this.timeStamp = Date.now();
     this.navSharefunc = new NavigationShareFunc();
     console.log('====初始化室內導航====');
   }
+
+
   updateCurrentNode() {
     var navshareFunc = this.navSharefunc;
-    this.x = parseInt(navshareFunc.navSeqHashMap[this.ansNav].x) * 1.1;
-    this.y = parseInt(navshareFunc.navSeqHashMap[this.ansNav].y) * 1.1;
-    console.dir('CarNavigation:' + (this.ansNav));
+    this.x = parseInt(navshareFunc.navSeqHashMap[this.ansNav].x) * 1.0;
+    this.y = parseInt(navshareFunc.navSeqHashMap[this.ansNav].y) * 1.0 - 50;
+    console.log('CarNavigation:' + (this.ansNav));
+    console.log('===============================');
+    this.lastNav = this.ansNav;
   }
 
   parameterConfig(seqAndRssi) {
-    if (this.once == false) {
+    if (this.once == true) {
       this.limitMaxQueueSize_Theshold = FIRST_LIMIT_QSIZE
     } else {
-      this.limitMaxQueueSize_Theshold = 5 * seqAndRssi.length;
+      this.limitMaxQueueSize_Theshold = 5 * seqAndRssi.length; // 設定queue size
+      this.scale = 1.1 + ((this.callbackCount - 5) / 5) * 0.05;
+
+      if (this.limitMaxQueueSize_Theshold > 30) {
+        this.isSwitchGetBle = true;
+      }
       if (this.limitMaxQueueSize_Theshold <= 30) {
         this.limitMaxQueueSize_Theshold = 30;
       }
@@ -178,20 +214,68 @@ export class IndoorFindSpace {
     }
   }
 
-  isNodeConditions(seqAndRssi){
-    if (this.ansNav !== seqAndRssi[0].seqId) { // 跳點對象(排行榜第一)和當前點不一樣
-      this.ansNav = seqAndRssi[0].seqId;
-      console.dir('CarNavigation:', this.ansNav);
-      return true;
+  filterBLE(ble) {
+    var navshareFunc = this.navSharefunc;
+    // if (this.ansNav!=''){ // test
+    //   ble[0].name = navshareFunc.navSeqHashMap[navshareFunc.navSeqHashMap[this.ansNav].Next_N.split(',')[0]].sensor_id;
+    // }
+    ble[0].name = navshareFunc.stringRemoveSpace(ble[0].name); //去除空白
+    var thres_rssi = (-100 + this.callbackCount / 4);
+    if (parseInt(ble[0].RSSI) < thres_rssi) // rssi 太小
+      return false;
+    if (!navshareFunc.navHashMap[ble[0].name]) //非場內ble
+      return false;
+    if (this.isSwitchGetBle) { // 是否啟動交替收 
+      if (ble[0].name === this.lastBle[0].name) {
+        return false;
+      } else {
+        this.lastBle = ble;
+      }
     }
+    return true;
+  }
+
+  isNodeConditions(seqAndRssi) {
+    var navshareFunc = this.navSharefunc;
+    if (this.ansNav !== seqAndRssi[0].seqId) { // 跳點對象(排行榜第一)和當前點不一樣
+      if (this.once) {
+        this.ansNav = seqAndRssi[0].seqId;
+        return true;
+      } else {
+        let rankOfFirstNode = seqAndRssi[0].seqId;
+        var nextN = navshareFunc.navSeqHashMap[this.ansNav].Next_N.split(",");
+        if (nextN.includes(rankOfFirstNode) ) {
+          if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale) {
+            this.ansNav = rankOfFirstNode;
+            return true;
+          }
+        }
+      }
+    }
+    //刷點條件
+    if (!navshareFunc.arrayKeyContains(seqAndRssi, 'seqId', this.ansNav)) {
+      if (seqAndRssi.length == 1) {
+        this.ansNav = seqAndRssi[0].seqId;
+        console.log('刷點成功' + this.ansNav);
+        return true;
+      } 
+      else if (navshareFunc.navSeqHashMap[seqAndRssi[0].seqId].Next_N.split(',').includes("" + seqAndRssi[1].seqId) || navshareFunc.navSeqHashMap[seqAndRssi[1].seqId].Next_N.split(',').includes("" + seqAndRssi[0].seqId)) {
+        this.ansNav = seqAndRssi[0].seqId;
+        console.log('刷點成功' + this.ansNav);
+        return true;
+      }
+      console.log('刷點失敗')
+    }
+
     return false;
   }
 
   startIndoorNavigation(ble) {
     var navshareFunc = this.navSharefunc;
-    var testval = (parseInt(ble[0].RSSI) + 100) % 3;
-    ble[0].name = ble[0].name.replace(/\s+/g, '');
-    if (navshareFunc.isLoadMap && navshareFunc.navHashMap[ble[0].name]) {
+    if (this.filterBLE(ble) == false) // 過濾ble rssi, 交替, 是否為場內beacon
+      return;
+
+    if (navshareFunc.isLoadMap) {
       navshareFunc.addBle2Queue(navQueue, ble, this.limitMaxQueueSize_Theshold); // 將收到的ble塞進navQueue
       var seqAndRssi = navshareFunc.mergeQueue2HashMap(navQueue);
       seqAndRssi = navshareFunc.sortByKey(seqAndRssi, 'RSSI'); // sort navQueue named seqAndRssi(以能量排名)
@@ -209,9 +293,9 @@ export class IndoorFindSpace {
       /*跳點邏輯 */
       if (navQueue.length >= this.limitMaxQueueSize_Theshold) {
         if (this.isNodeConditions(seqAndRssi) == true) {
-          this.once = true;
+          this.once = false;
           this.updateCurrentNode();
-          console.dir('Rank:', seqAndRssi);
+          console.log('Rank:', seqAndRssi);
         }
       }
 
