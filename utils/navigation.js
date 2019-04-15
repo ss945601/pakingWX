@@ -15,11 +15,11 @@ const FIRST_N_QSIZE = 30;
 export class NavigationShareFunc {
   constructor() {
     this.init();
+  }
+  init() {
     this.isLoadMap = false;
     this.navHashMap = new Array();
     this.navSeqHashMap = new Array();
-  }
-  init() {
     this.initMapGraph();
   }
   initMapGraph() {
@@ -136,17 +136,23 @@ export class IndoorFindSpace {
    * @version 2019-04-11
    */
 
-  constructor() {
-    this.navSharefunc = new NavigationShareFunc();
+  constructor() {    
     this.init();
-    this.x = 0;
-    this.y = 0;
-    this.timeStamp = Date.now();
   }
   init() {
     navQueue = new Array();
     callbackCount = 0;
+    this.x = 0;
+    this.y = 0;
+    this.timeStamp = Date.now();
+    this.navSharefunc = new NavigationShareFunc();
     console.log('====初始化室內導航====');
+  }
+  updateCurrentNode(ansNav){
+    var navshareFunc = this.navSharefunc;
+    this.x = parseInt(navshareFunc.navSeqHashMap[ansNav].x) * 1.1;
+    this.y = parseInt(navshareFunc.navSeqHashMap[ansNav].y) * 1.1;
+    console.dir('CarNavigation:' + (ansNav));
   }
   startIndoorNavigation(ble) {
     var navshareFunc = this.navSharefunc;
@@ -166,10 +172,8 @@ export class IndoorFindSpace {
       if (navQueue.length >= 30) {
         if (ansNav !== seqAndRssi[0].seqId) {
           ansNav = seqAndRssi[0].seqId;
-          this.x = parseInt(navshareFunc.navSeqHashMap[ansNav].x)*1.1;
-          this.y = parseInt(navshareFunc.navSeqHashMap[ansNav].y)*1.1;
-          var svg = SVG.SVGParser
-          console.dir('CarNavigation:'+(ansNav));
+          updateCurrentNode(ansNav);
+          console.dir('Rank:', seqAndRssi);
         }
       }
     }
