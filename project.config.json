@@ -8,7 +8,7 @@
 		"newFeature": true
 	},
 	"compileType": "miniprogram",
-	"libVersion": "1.6.4",
+	"libVersion": "2.6.5",
 	"appid": "wx8fdb3a2314687b01",
 	"projectname": "wechat-ble-demo-master",
 	"condition": {
