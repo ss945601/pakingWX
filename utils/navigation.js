@@ -7,7 +7,8 @@ var sensorData;
 var navQueue;
 var floorQueue;
 var graphList = [];
-var nowFloor = '4F';
+var nowFloor = '3F'; 
+var seqAndRssi;
 const FIRST_LIMIT_QSIZE = 30;
 
 export class NavigationShareFunc {
@@ -194,7 +195,7 @@ export class IndoorFindSpace {
     this.lastNav = this.ansNav;
   }
 
-  parameterConfig(seqAndRssi) {
+  parameterConfig() {
     if (this.once == true) {
       this.limitMaxQueueSize_Theshold = FIRST_LIMIT_QSIZE
     } else {
@@ -216,9 +217,9 @@ export class IndoorFindSpace {
 
   filterBLE(ble) {
     var navshareFunc = this.navSharefunc;
-    // if (this.ansNav!=''){ // test
-    //   ble[0].name = navshareFunc.navSeqHashMap[navshareFunc.navSeqHashMap[this.ansNav].Next_N.split(',')[0]].sensor_id;
-    // }
+    if (this.ansNav!=''){ // test
+      ble[0].name = navshareFunc.navSeqHashMap[navshareFunc.navSeqHashMap[this.ansNav].Next_N.split(',')[0]].sensor_id;
+    }
     ble[0].name = navshareFunc.stringRemoveSpace(ble[0].name); //去除空白
     var thres_rssi = (-100 + this.callbackCount / 4);
 
@@ -228,17 +229,11 @@ export class IndoorFindSpace {
       return false;
     if (navshareFunc.navHashMap[ble[0].name].floor !== nowFloor) 
       return false;
-    if (this.isSwitchGetBle) { // 是否啟動交替收 
-      if (this.lastBle != '' && ble[0].name === this.lastBle) {
-        return false;
-      } else {
-        this.lastBle = ble[0].name;
-      }
-    }
+   
     return true;
   }
 
-  isNodeConditions(seqAndRssi) {
+  isNodeConditions() {
     var navshareFunc = this.navSharefunc;
     if (this.ansNav !== seqAndRssi[0].seqId) { // 跳點對象(排行榜第一)和當前點不一樣
       if (this.once) {
@@ -273,29 +268,42 @@ export class IndoorFindSpace {
     return false;
   }
 
+  preProcessBLE(ble){
+    var navshareFunc = this.navSharefunc;
+    if (this.filterBLE(ble) == false) // 過濾ble rssi, 是否為場內beacon
+      return false;
+    if (navshareFunc.getTimestempDiff(this.timeStamp) > 1) {
+      this.parameterConfig(); // 調整Node queue最大數量
+      console.log('每秒callback數' + this.callbackCount);
+      this.callbackCount = 1;
+      this.timeStamp = Date.now()
+    }
+    if (this.isSwitchGetBle) { // 是否啟動交替收 
+      if (this.lastBle != '' && ble[0].name === this.lastBle) {
+        return false;
+      } else {
+        this.lastBle = ble[0].name;   
+      }
+    }
+    return true;
+  }
+
   startIndoorNavigation(ble) {
     var navshareFunc = this.navSharefunc;
-    if (this.filterBLE(ble) == false) // 過濾ble rssi, 交替, 是否為場內beacon
+    /*根據每秒callback數量對參數做調整 */
+ 
+    if (this.preProcessBLE(ble) == false)
       return;
 
     if (navshareFunc.isLoadMap) {
+      this.callbackCount++;
       navshareFunc.addBle2Queue(navQueue, ble, this.limitMaxQueueSize_Theshold); // 將收到的ble塞進navQueue
-      var seqAndRssi = navshareFunc.mergeQueue2HashMap(navQueue);
-      seqAndRssi = navshareFunc.sortByKey(seqAndRssi, 'RSSI'); // sort navQueue named seqAndRssi(以能量排名)
-
-      /*根據每秒callback數量對參數做調整 */
-      if (navshareFunc.getTimestempDiff(this.timeStamp) > 1) {
-        this.parameterConfig(seqAndRssi); // 調整Node queue最大數量
-        console.log('每秒callback數' + this.callbackCount);
-        this.callbackCount = 1;
-        this.timeStamp = Date.now()
-      } else {
-        this.callbackCount++;
-      }
+      var tmp = navshareFunc.mergeQueue2HashMap(navQueue);
+      seqAndRssi = navshareFunc.sortByKey(tmp, 'RSSI'); // sort navQueue named seqAndRssi(以能量排名)
 
       /*跳點邏輯 */
       if (navQueue.length >= this.limitMaxQueueSize_Theshold) {
-        if (this.isNodeConditions(seqAndRssi) == true) {
+        if (this.isNodeConditions() == true) {
           this.once = false;
           this.updateCurrentNode();
           console.log('Rank:', seqAndRssi);
