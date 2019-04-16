@@ -188,7 +188,7 @@ export class IndoorFindSpace {
   updateCurrentNode() {
     var navshareFunc = this.navSharefunc;
     this.x = parseInt(navshareFunc.navSeqHashMap[this.ansNav].x) * 1.0;
-    this.y = parseInt(navshareFunc.navSeqHashMap[this.ansNav].y) * 1.0 - 50;
+    this.y = parseInt(navshareFunc.navSeqHashMap[this.ansNav].y) * 1.0 ;
     console.log('CarNavigation:' + (this.ansNav));
     console.log('===============================');
     this.lastNav = this.ansNav;

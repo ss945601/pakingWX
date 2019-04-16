@@ -53,3 +53,7 @@
   font-size: 12px;
   display: block;
 }
+image{
+  width:100%;
+  height:100%;
+}
