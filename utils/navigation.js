@@ -10,6 +10,7 @@ var floorQueue;
 var graphList = [];
 var nowFloor = '3F';
 var seqAndRssi;
+var istestMode = true;
 const FIRST_LIMIT_QSIZE = 30;
 
 export class NavigationShareFunc {
@@ -32,14 +33,15 @@ export class NavigationShareFunc {
     SensorDataModel.sensorInfo.init();
     sensorData = SensorDataModel.sensorInfo.Data;
     if (sensorData !== undefined) {
-      console.log('取得場內資訊');
+      console.log('取得場內資訊(sensorData)');
       console.log(sensorData);
       this.buildMapGraph();
       this.buildNavSeqHashMap();
+      this.buildFloorDijkstra();
       this.isLoadMap = true;
     } else {
       var pointer = this;
-      setTimeout(function() {
+      setTimeout(function () {
         pointer.initMapGraph();
       }, 2000);
     }
@@ -60,9 +62,9 @@ export class NavigationShareFunc {
       };
       this.navHashMap = Object.assign({}, this.navHashMap, info);
     }
-    console.log('建立全域N字典');
+    console.log('建立全域N字典(navHashMap)');
     console.log(this.navHashMap);
-    console.log('建立有向圖');
+    console.log('建立有向圖(graphList)');
     console.log(graphList);
     // let dij = new Dijkstra.DijkstraAlgorithm(map)
     // console.log(dij.findPathWithDijkstra(1, 7))
@@ -82,7 +84,7 @@ export class NavigationShareFunc {
         this.navSeqHashMap = Object.assign({}, this.navSeqHashMap, info);
       }
     }
-    console.log('建立當前樓層N字典');
+    console.log('建立當前樓層N字典(navSeqHashMap)');
     console.log(this.navSeqHashMap);
     this.n2nextNdis = this.calcN2nextNdis()
   }
@@ -98,8 +100,16 @@ export class NavigationShareFunc {
     if (edgeSize != 0)
       return dis / edgeSize
   }
+
+  buildFloorDijkstra() {
+    this.floorDijkstra = new Dijkstra.DijkstraAlgorithm(graphList[nowFloor]);
+    console.log('建立樓層Dijkstra(floorDijkstra)');
+    console.log(this.floorDijkstra);
+  }
+
+
   sortByKey(array, key) {
-    return array.sort(function(a, b) {
+    return array.sort(function (a, b) {
       var y = a[key];
       var x = b[key];
       return ((x < y) ? -1 : ((x > y) ? 1 : 0));
@@ -107,8 +117,8 @@ export class NavigationShareFunc {
   }
   mergeQueue2HashMap(queue) {
     var output = [];
-    queue.forEach(function(item) {
-      var existing = output.filter(function(v, i) {
+    queue.forEach(function (item) {
+      var existing = output.filter(function (v, i) {
         return v.seqId == item.seqId;
       });
       if (existing.length) {
@@ -287,7 +297,7 @@ export class IndoorFindSpace {
       if (this.limitMaxQueueSize_Theshold > 30) {
         this.isSwitchGetBle = true;
       }
-      this.scale = navshareFunc.getLimitBound(1.2, 1.5, this.scale);
+      this.scale = navshareFunc.getLimitBound(1.1, 1.4, this.scale);
       this.limitMaxQueueSize_Theshold = navshareFunc.getLimitBound(30, 60, this.limitMaxQueueSize_Theshold)
       //console.log(this.limitMaxQueueSize_Theshold);
     }
@@ -295,9 +305,9 @@ export class IndoorFindSpace {
 
   filterBLE(ble) {
     var navshareFunc = this.navSharefunc;
-    // if (this.ansNav!=''){ // test
-    //   ble[0].name = navshareFunc.navSeqHashMap[navshareFunc.navSeqHashMap[this.ansNav].Next_N.split(',')[0]].sensor_id;
-    // }
+    if (this.ansNav != '' && istestMode) { // test
+      ble[0].name = navshareFunc.navSeqHashMap[navshareFunc.navSeqHashMap[this.ansNav].Next_N[0]].sensor_id;
+    }
     ble[0].name = navshareFunc.stringRemoveSpace(ble[0].name); //去除空白
     var thres_rssi = (-100 + this.callbackCount / 4);
 
@@ -321,24 +331,38 @@ export class IndoorFindSpace {
     }
     //一般倍率跳點
     if (this.ansNav !== seqAndRssi[0].seqId) { // 跳點對象(排行榜第一)和當前點不一樣
-      if (this.once) {
+      // 室內導航演算法
+      if (this.once) { //第一次跳點
         this.ansNav = seqAndRssi[0].seqId;
         return true;
       } else {
         let rankOfFirstNode = seqAndRssi[0].seqId;
         var nextN = navshareFunc.navSeqHashMap[this.ansNav].Next_N;
-        if (nextN.includes(rankOfFirstNode)) {
-          if (nextN.length == 1) {
-            if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale) {
+        var rankOfFirstNodePosition = navshareFunc.getPointBySeqID(rankOfFirstNode);
+        var multiPosition = navshareFunc.getMultiLocationPoint(seqAndRssi);
+        var dist = navshareFunc.getDistanceBetweenPoints(multiPosition, rankOfFirstNodePosition);
+        var lr = navshareFunc.floorDijkstra.findPathWithDijkstra(this.ansNav, rankOfFirstNode);
+
+        if (nextN.includes(rankOfFirstNode)) { // 正常跳點
+          if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale) {
+            if (nextN.length == 1) {
               this.ansNav = rankOfFirstNode;
               console.log('單向倍率跳點');
               return true;
+            } else if (nextN.length > 1) {
+              console.log('雙向倍率');
+              return true;
             }
-          } else if (nextN.length > 1) {
+          }
 
+          if (((lr <= 2 && lr >= 1 && nextN.length == 1) || (lr == 1 && nextN.length > 1)) && dist < (180 / (nextN.length + 3))) {
+            this.ansNav = rankOfFirstNode;
+            console.log('多點定位跳點:' + dist + '跳點長度：' + (lr.length - 1));
+            return true;
           }
         }
       }
+
     }
     //刷點條件
     if (!navshareFunc.arrayKeyContains(seqAndRssi, 'seqId', this.ansNav)) {
@@ -366,7 +390,7 @@ export class IndoorFindSpace {
     }
     console.log(this.multiLocationTraceQueue);
     var distArray = new Array();
-    this.multiLocationTraceQueue.forEach(function(element) {
+    this.multiLocationTraceQueue.forEach(function (element) {
       distArray.push(navshareFunc.getDistanceBetweenPoints(element, multiPosition));
     });
     var std = navshareFunc.getstandardDeviation(distArray);
@@ -553,7 +577,7 @@ export class IndoorFindSpaceAndroid {
       return true;
     } else {
       let rankOfFirstNode = seqAndRssi[0].seqId;
-      
+
       for (var i = 0; i < nextN.length; i++) {
 
       }
