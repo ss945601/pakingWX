@@ -154,9 +154,11 @@ Page({
           var str = res.errMsg;
           if (!(str.indexOf("fail") > -1)){
             wx.closeBluetoothAdapter({
-              success: function (res) { console.log('重啟') },
+              success: function (res) {
+                console.log('重啟') 
+                self.bleInit();
+              },
             })
-            self.bleInit();
           }
         }, 10000);
       }
@@ -174,6 +176,7 @@ Page({
       console.log(`adapterState changed, now is`, res)
       if (res.available) {
         // 是否可用
+        slef.bleInit();
         console.log("蓝牙状态以改变！")
         slef.setData({
           bleStatus: "蓝牙已打开"
@@ -183,17 +186,6 @@ Page({
           bleStatus: "蓝牙已关闭"
         });
         // 不可用时
-        wx.showModal({
-          showCancel: false,
-          title: '提示',
-          content: '设备蓝牙未打开，请打开蓝牙功能',
-          success: function(res) {
-            if (res.confirm) {
-              // console.log('用户点击确定')
-              // 退出小程序
-            }
-          }
-        });
       }
     });
   },
