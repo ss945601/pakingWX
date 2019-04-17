@@ -10,7 +10,7 @@ var floorQueue;
 var graphList = [];
 var nowFloor = '3F';
 var seqAndRssi;
-var istestMode = false;
+var istestMode = true;
 const FIRST_LIMIT_QSIZE = 30;
 
 export class NavigationShareFunc {
@@ -269,6 +269,7 @@ export class IndoorFindSpace {
     this.lastBle = '';
     this.timeStamp = Date.now();
     this.multiLocationTraceQueue = new Array();
+    this.rssiRankBySeq = new Array();
     this.navSharefunc = new NavigationShareFunc();
     console.log('====初始化室內導航====');
   }
@@ -321,6 +322,17 @@ export class IndoorFindSpace {
     return true;
   }
 
+  getObjectKeyIndex(obj, keyToFind) {
+    var i = 0, key;
+    for (key in obj) {
+      if (key == keyToFind) {
+        return i;
+      }
+      i++;
+    }
+    return null;
+  }
+
   isChangeNodeAlgorithm() {
     var navshareFunc = this.navSharefunc;
     //一般倍率跳點
@@ -337,29 +349,35 @@ export class IndoorFindSpace {
         var dist = navshareFunc.getDistanceBetweenPoints(multiPosition, rankOfFirstNodePosition);
         var lr = navshareFunc.floorDijkstra.findPathWithDijkstra(this.ansNav, rankOfFirstNode);
         var order = Number.MAX_SAFE_INTEGER
-
+        
         if (nextN.includes(rankOfFirstNode)) { // 正常跳點
           nextN.forEach(function(element) {
             var next2N = navshareFunc.navSeqHashMap[element].Next_N
             next2N.forEach(function(node) {
-              var keytoFind = "seqId";
-              var tmp = Object.keys(seqAndRssi).indexOf(keytoFind)
-              if (tmp != -1 && tmp < order) {
+              var tmp = -1;
+              for (var i = 0; seqAndRssi[i];i++){
+                if (seqAndRssi[i].seqId == rankOfFirstNode) 
+                  tmp = i;
+              }
+              if (tmp != -1 &&tmp < order) {
                 order = tmp;
-                console.log('下下點名次：', order)
               }
             });
           });
-
+         
           if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale && dist < navshareFunc.n2nextNdis / 2) {
             if (nextN.length == 1) {
               this.ansNav = rankOfFirstNode;
               console.log('單向倍率跳點' + dist + '<' + navshareFunc.n2nextNdis);
+              console.info(rankOfFirstNode)
+              console.info(rssiRankBySeq)
+              console.info('下下點:', order);
               return true;
             } else if (nextN.length > 1) {
               if (order < 3) {
                 this.ansNav = rankOfFirstNode;
                 console.log('雙向倍率' + dist + '<' + navshareFunc.n2nextNdis);
+                console.log('下下點:', order);
                 return true;
               }
             }
@@ -442,7 +460,6 @@ export class IndoorFindSpace {
       navshareFunc.addBle2Queue(navQueue, ble, this.limitMaxQueueSize_Theshold); // 將收到的ble塞進navQueue
       var tmp = navshareFunc.mergeQueue2HashMap(navQueue);
       seqAndRssi = navshareFunc.sortByKey(tmp, 'RSSI'); // sort navQueue named seqAndRssi(以能量排名)
-
       /*跳點邏輯 */
       if (navQueue.length >= this.limitMaxQueueSize_Theshold) {
         if (this.isChangeNodeAlgorithm() == true) {
