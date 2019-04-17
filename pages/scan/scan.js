@@ -49,11 +49,6 @@ Page({
         });
       },
       complete: function() {
-        var timer = setTimeout(function () {
-          wx.closeBluetoothAdapter({
-            success: function (res) { '重啟' },
-          })
-        }, 2000);
       }
 
     });
@@ -154,12 +149,15 @@ Page({
           }
         });
       },
-      complete: function () {
+      complete: function (res) {
         var timer = setTimeout(function () {
-          wx.closeBluetoothAdapter({
-            success: function (res) { console.log('重啟') },
-          })
-          self.bleInit();
+          var str = res.errMsg;
+          if (!(str.indexOf("fail") > -1)){
+            wx.closeBluetoothAdapter({
+              success: function (res) { console.log('重啟') },
+            })
+            self.bleInit();
+          }
         }, 10000);
       }
     });
