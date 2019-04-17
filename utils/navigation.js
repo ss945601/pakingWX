@@ -281,9 +281,9 @@ export class IndoorFindSpace {
 
   filterBLE(ble) {
     var navshareFunc = this.navSharefunc;
-    if (this.ansNav!=''){ // test
-      ble[0].name = navshareFunc.navSeqHashMap[navshareFunc.navSeqHashMap[this.ansNav].Next_N.split(',')[0]].sensor_id;
-    }
+    // if (this.ansNav!=''){ // test
+    //   ble[0].name = navshareFunc.navSeqHashMap[navshareFunc.navSeqHashMap[this.ansNav].Next_N.split(',')[0]].sensor_id;
+    // }
     ble[0].name = navshareFunc.stringRemoveSpace(ble[0].name); //去除空白
     var thres_rssi = (-100 + this.callbackCount / 4);
 
@@ -370,7 +370,7 @@ export class IndoorFindSpace {
       console.log('每秒callback數' + this.callbackCount );
       if (seqAndRssi !== undefined) {
         var std = this.getStdFromMultiLocationTrace();
-        console.log('多點定位位移標準差：'+ std);
+        //console.log('多點定位位移標準差：'+ std);
       }
       this.callbackCount = 1;
       this.timeStamp = Date.now()
