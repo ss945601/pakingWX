@@ -337,14 +337,14 @@ export class IndoorFindSpace {
         var dist = navshareFunc.getDistanceBetweenPoints(multiPosition, rankOfFirstNodePosition);
         var lr = navshareFunc.floorDijkstra.findPathWithDijkstra(this.ansNav, rankOfFirstNode);
         var order = Number.MAX_SAFE_INTEGER
-        
+
         if (nextN.includes(rankOfFirstNode)) { // 正常跳點
-          nextN.forEach(function (element) {
+          nextN.forEach(function(element) {
             var next2N = navshareFunc.navSeqHashMap[element].Next_N
-            next2N.forEach(function (node) {
+            next2N.forEach(function(node) {
               var keytoFind = "seqId";
               var tmp = Object.keys(seqAndRssi).indexOf(keytoFind)
-              if (tmp != -1 && tmp < order ){
+              if (tmp != -1 && tmp < order) {
                 order = tmp;
                 console.log('下下點名次：', order)
               }
@@ -494,8 +494,6 @@ export class IndoorFindSpaceAndroid {
     var navshareFunc = this.navSharefunc;
     this.x = parseInt(navshareFunc.navSeqHashMap[this.ansNav].x) * 1.0;
     this.y = parseInt(navshareFunc.navSeqHashMap[this.ansNav].y) * 1.0 - 50;
-    console.log('CarNavigation:' + (this.ansNav));
-    console.log('===============================');
     this.lastNav = this.ansNav;
   }
 
@@ -507,10 +505,10 @@ export class IndoorFindSpaceAndroid {
       this.isSwitchGetBle = !(this.callbackCount < 20);
       if (this.callbackCount < 20) {
         if (this.callbackCount < 3) {
-          this.limitMaxQueueSize_Theshold = Math.max(8, this.thresCount);
+          this.limitMaxQueueSize_Theshold = Math.max(8, navshareFunc.getLimitBound(50, 0, this.thresCount));
           return
         } else {
-          this.limitMaxQueueSize_Theshold = Math.max(15, this.thresCount);
+          this.limitMaxQueueSize_Theshold = Math.max(15, navshareFunc.getLimitBound(50, 0, this.thresCount));
           return
         }
       }
@@ -521,15 +519,14 @@ export class IndoorFindSpaceAndroid {
         this.limitMaxQueueSize_Theshold = 30;
         return
       }
-      //console.log(this.limitMaxQueueSize_Theshold);
     }
   }
 
   filterBLE(ble) {
     var navshareFunc = this.navSharefunc;
-    // if (this.ansNav!=''){ // test
-    //   ble[0].name = navshareFunc.navSeqHashMap[navshareFunc.navSeqHashMap[this.ansNav].Next_N.split(',')[0]].sensor_id;
-    // }
+    if (this.ansNav != '') { // test
+      ble[0].name = navshareFunc.navSeqHashMap[navshareFunc.navSeqHashMap[this.ansNav].Next_N[0]].sensor_id;
+    }
     ble[0].name = navshareFunc.stringRemoveSpace(ble[0].name); //去除空白
     var thres_rssi = -101;
 
@@ -548,7 +545,7 @@ export class IndoorFindSpaceAndroid {
     if (this.filterBLE(ble) == false) // 過濾ble rssi, 是否為場內beacon
       return false;
     if (navshareFunc.getTimestempDiff(this.timeStamp) > 2) {
-      console.log('callbackCount' + this.callbackCount);
+      console.log('callbackCount: ' + this.callbackCount);
       if (this.callbackCount != 1) {
         if (this.callbackCount > this.thresCount) {
           this.thresCount = this.callbackCount;
@@ -583,7 +580,6 @@ export class IndoorFindSpaceAndroid {
 
 
     if (this.once) {
-      console.info(seqAndRssi)
       this.ansNav = seqAndRssi[0].seqId;
       console.info("-----Multi-First----- " + this.ansNav)
       return true;
@@ -623,9 +619,8 @@ export class IndoorFindSpaceAndroid {
           } else if (nextNodesize == 1 && navshareFunc.navSeqHashMap[nextN[i]].Next_N.length == 1 &&
             navshareFunc.navSeqHashMap[nextN[i]].Next_N[0] == rankOfFirstNode &&
             seqAndRssi[0].rssi > this.nowNodeValue['RSSI'] * 1.2 &&
-            seqAndRssi.some(obj => {
-              return obj.seqId == nextN[i]
-            })) {
+            navshareFunc.arrayKeyContains(seqAndRssi, seqId, nextN[i])
+          ) {
             if (navshareFunc.n2nextNdis * 1.3 > next2NodeLocateDis) {
               this.ansNav = nextN[i];
               console.info("-----Multi-4----- " + nextN[i])
@@ -659,7 +654,6 @@ export class IndoorFindSpaceAndroid {
       navshareFunc.addBle2Queue(navQueue, ble, this.limitMaxQueueSize_Theshold); // 將收到的ble塞進navQueue
       var tmp = navshareFunc.mergeQueue2HashMap(navQueue);
       seqAndRssi = navshareFunc.sortByKey(tmp, 'RSSI'); // sort navQueue named seqAndRssi(以能量排名)
-
       if (this.ansNav != 0) {
         this.nowNodeValue = seqAndRssi.find(obj => {
           return obj.seqId == this.ansNav
@@ -674,6 +668,7 @@ export class IndoorFindSpaceAndroid {
           this.switchTime = Date.now();
           this.updateCurrentNode();
           console.log('Rank:', seqAndRssi);
+          console.log('==================');
         }
       }
 
