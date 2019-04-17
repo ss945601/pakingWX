@@ -323,12 +323,6 @@ export class IndoorFindSpace {
 
   isChangeNodeAlgorithm() {
     var navshareFunc = this.navSharefunc;
-    if (!this.once && seqAndRssi.length > 0) {
-      var ansPosition = navshareFunc.getPointBySeqID(this.ansNav);
-      var multiPosition = navshareFunc.getMultiLocationPoint(seqAndRssi);
-      var dist = navshareFunc.getDistanceBetweenPoints(multiPosition, ansPosition);
-
-    }
     //一般倍率跳點
     if (this.ansNav !== seqAndRssi[0].seqId) { // 跳點對象(排行榜第一)和當前點不一樣
       // 室內導航演算法
@@ -344,22 +338,21 @@ export class IndoorFindSpace {
         var lr = navshareFunc.floorDijkstra.findPathWithDijkstra(this.ansNav, rankOfFirstNode);
 
         if (nextN.includes(rankOfFirstNode)) { // 正常跳點
-          if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale) {
+          if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale && dist < navshareFunc.n2nextNdis /2 ) {
             if (nextN.length == 1) {
               this.ansNav = rankOfFirstNode;
-              console.log('單向倍率跳點');
+              console.log('單向倍率跳點' + dist + '<' + navshareFunc.n2nextNdis);
               return true;
             } else if (nextN.length > 1) {
-              console.log('雙向倍率');
+              console.log('雙向倍率' + dist + '<' + navshareFunc.n2nextNdis );
               return true;
             }
           }
-
-          if (((lr <= 2 && lr >= 1 && nextN.length == 1) || (lr == 1 && nextN.length > 1)) && dist < (180 / (nextN.length + 3))) {
-            this.ansNav = rankOfFirstNode;
-            console.log('多點定位跳點:' + dist + '跳點長度：' + (lr.length - 1));
-            return true;
-          }
+        }
+        if (((lr <= 2 && lr >= 1 && nextN.length == 1) || (lr == 1 && nextN.length > 1)) && dist < (navshareFunc.n2nextNdis / (nextN.length + 3)))         {
+          this.ansNav = rankOfFirstNode;
+          console.log('多點定位跳點:' + dist + '<' + navshareFunc.n2nextNdis + ',跳點長度：' + (lr.length - 1));
+          return true;
         }
       }
 
