@@ -10,7 +10,7 @@ var floorQueue;
 var graphList = [];
 var nowFloor = '3F';
 var seqAndRssi;
-var istestMode = true;
+var istestMode = false;
 const FIRST_LIMIT_QSIZE = 30;
 
 export class NavigationShareFunc {
@@ -357,7 +357,7 @@ export class IndoorFindSpace {
               console.log('單向倍率跳點' + dist + '<' + navshareFunc.n2nextNdis);
               return true;
             } else if (nextN.length > 1) {
-              if (order > 3) {
+              if (order < 3) {
                 this.ansNav = rankOfFirstNode;
                 console.log('雙向倍率' + dist + '<' + navshareFunc.n2nextNdis);
                 return true;
