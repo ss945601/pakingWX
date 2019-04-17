@@ -269,7 +269,6 @@ export class IndoorFindSpace {
     this.lastBle = '';
     this.timeStamp = Date.now();
     this.multiLocationTraceQueue = new Array();
-    this.rssiRankBySeq = new Array();
     this.navSharefunc = new NavigationShareFunc();
     console.log('====初始化室內導航====');
   }
@@ -322,17 +321,6 @@ export class IndoorFindSpace {
     return true;
   }
 
-  getObjectKeyIndex(obj, keyToFind) {
-    var i = 0, key;
-    for (key in obj) {
-      if (key == keyToFind) {
-        return i;
-      }
-      i++;
-    }
-    return null;
-  }
-
   isChangeNodeAlgorithm() {
     var navshareFunc = this.navSharefunc;
     //一般倍率跳點
@@ -356,7 +344,7 @@ export class IndoorFindSpace {
             next2N.forEach(function(node) {
               var tmp = -1;
               for (var i = 0; seqAndRssi[i];i++){
-                if (seqAndRssi[i].seqId == rankOfFirstNode) 
+                if (seqAndRssi[i].seqId == node) 
                   tmp = i;
               }
               if (tmp != -1 &&tmp < order) {
@@ -369,9 +357,7 @@ export class IndoorFindSpace {
             if (nextN.length == 1) {
               this.ansNav = rankOfFirstNode;
               console.log('單向倍率跳點' + dist + '<' + navshareFunc.n2nextNdis);
-              console.info(rankOfFirstNode)
-              console.info(rssiRankBySeq)
-              console.info('下下點:', order);
+              console.log('下下點:', order);
               return true;
             } else if (nextN.length > 1) {
               if (order < 3) {
