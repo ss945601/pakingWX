@@ -8,7 +8,7 @@ var sensorData;
 var navQueue;
 var floorQueue;
 var graphList = [];
-var nowFloor = '3F'; 
+var nowFloor = '3F';
 var seqAndRssi;
 const FIRST_LIMIT_QSIZE = 30;
 
@@ -25,6 +25,7 @@ export class NavigationShareFunc {
     this.isLoadMap = false;
     this.navHashMap = new Array();
     this.navSeqHashMap = new Array();
+    this.n2nextNdis = 0
     this.initMapGraph();
   }
   initMapGraph() {
@@ -82,7 +83,19 @@ export class NavigationShareFunc {
     }
     console.log('建立當前樓層N字典');
     console.log(this.navSeqHashMap);
-
+    this.n2nextNdis = this.calcN2nextNdis()
+  }
+  calcN2nextNdis() {
+    var edgeSize = 0
+    var dis = 0
+    for (var seq in this.navSeqHashMap) {
+      this.navSeqHashMap[seq].Next_N.split(',').forEach(nextN => {
+        dis += this.getDistanceBetweenPoints(this.getPointBySeqID(this.navSeqHashMap[seq].seq_id), this.getPointBySeqID(nextN))
+        edgeSize++
+      })
+    }
+    if (edgeSize != 0)
+      return dis / edgeSize
   }
   sortByKey(array, key) {
     return array.sort(function(a, b) {
@@ -199,14 +212,14 @@ export class NavigationShareFunc {
     return new Point2D.Point2D(multiPointLocationX, multiPointLocationY);
   }
 
-  getPointBySeqID(seqId){
+  getPointBySeqID(seqId) {
     var seqIdX = this.navSeqHashMap[seqId].x;
     var seqIdY = this.navSeqHashMap[seqId].y;
     return new Point2D.Point2D(seqIdX, seqIdY);
   }
 
-  getDistanceBetweenPoints(p1,p2){
-    return  Math.sqrt(Math.pow((p1.x - p2.x), 2) + Math.pow((p1.y - p2.y), 2));
+  getDistanceBetweenPoints(p1, p2) {
+    return Math.sqrt(Math.pow((p1.x - p2.x), 2) + Math.pow((p1.y - p2.y), 2));
   }
 
   getstandardDeviation = (arr, usePopulation = false) => {
@@ -242,7 +255,7 @@ export class IndoorFindSpace {
     this.limitRSSI_Theshold = 0;
     this.once = true; // 第一次收
     this.isSwitchGetBle = false;
-    this.lastBle = '' ;
+    this.lastBle = '';
     this.timeStamp = Date.now();
     this.multiLocationTraceQueue = new Array();
     this.navSharefunc = new NavigationShareFunc();
@@ -256,7 +269,7 @@ export class IndoorFindSpace {
       return;
     }
     this.x = parseInt(navshareFunc.navSeqHashMap[this.ansNav].x) * 1.0;
-    this.y = parseInt(navshareFunc.navSeqHashMap[this.ansNav].y) * 1.0 ;
+    this.y = parseInt(navshareFunc.navSeqHashMap[this.ansNav].y) * 1.0;
     console.log('CarNavigation:' + (this.ansNav));
     console.log('===============================');
     this.lastNav = this.ansNav;
@@ -291,9 +304,9 @@ export class IndoorFindSpace {
       return false;
     if (!navshareFunc.navHashMap[ble[0].name]) //非場內ble
       return false;
-    if (navshareFunc.navHashMap[ble[0].name].floor !== nowFloor) 
+    if (navshareFunc.navHashMap[ble[0].name].floor !== nowFloor)
       return false;
-   
+
     return true;
   }
 
@@ -303,7 +316,7 @@ export class IndoorFindSpace {
       var ansPosition = navshareFunc.getPointBySeqID(this.ansNav);
       var multiPosition = navshareFunc.getMultiLocationPoint(seqAndRssi);
       var dist = navshareFunc.getDistanceBetweenPoints(multiPosition, ansPosition);
-      
+
     }
     //一般倍率跳點
     if (this.ansNav !== seqAndRssi[0].seqId) { // 跳點對象(排行榜第一)和當前點不一樣
@@ -313,16 +326,15 @@ export class IndoorFindSpace {
       } else {
         let rankOfFirstNode = seqAndRssi[0].seqId;
         var nextN = navshareFunc.navSeqHashMap[this.ansNav].Next_N.split(",");
-        if (nextN.includes(rankOfFirstNode) ) {
-          if ( nextN.length == 1) {
+        if (nextN.includes(rankOfFirstNode)) {
+          if (nextN.length == 1) {
             if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale) {
               this.ansNav = rankOfFirstNode;
               console.log('單向倍率跳點');
               return true;
             }
-          }
-          else if (nextN.length > 1){
-            
+          } else if (nextN.length > 1) {
+
           }
         }
       }
@@ -333,8 +345,7 @@ export class IndoorFindSpace {
         this.ansNav = seqAndRssi[0].seqId;
         console.log('刷點成功' + this.ansNav);
         return true;
-      } 
-      else if (navshareFunc.navSeqHashMap[seqAndRssi[0].seqId].Next_N.split(',').includes("" + seqAndRssi[1].seqId) || navshareFunc.navSeqHashMap[seqAndRssi[1].seqId].Next_N.split(',').includes("" + seqAndRssi[0].seqId)) {
+      } else if (navshareFunc.navSeqHashMap[seqAndRssi[0].seqId].Next_N.split(',').includes("" + seqAndRssi[1].seqId) || navshareFunc.navSeqHashMap[seqAndRssi[1].seqId].Next_N.split(',').includes("" + seqAndRssi[0].seqId)) {
         this.ansNav = seqAndRssi[0].seqId;
         console.log('刷點成功' + this.ansNav);
         return true;
@@ -345,29 +356,29 @@ export class IndoorFindSpace {
     return false;
   }
 
-  getStdFromMultiLocationTrace(){
+  getStdFromMultiLocationTrace() {
     var navshareFunc = this.navSharefunc;
     var multiPosition = navshareFunc.getMultiLocationPoint(seqAndRssi);
     this.multiLocationTraceQueue.push(multiPosition);
     while (this.multiLocationTraceQueue.length > 5) {
-      this.multiLocationTraceQueue.shift();      
+      this.multiLocationTraceQueue.shift();
     }
     console.log(this.multiLocationTraceQueue);
-    var distArray = new Array() ;
-    this.multiLocationTraceQueue.forEach(function (element) {
+    var distArray = new Array();
+    this.multiLocationTraceQueue.forEach(function(element) {
       distArray.push(navshareFunc.getDistanceBetweenPoints(element, multiPosition));
     });
     var std = navshareFunc.getstandardDeviation(distArray);
     return std;
   }
 
-  preProcessBLE(ble){
+  preProcessBLE(ble) {
     var navshareFunc = this.navSharefunc;
     if (this.filterBLE(ble) == false) // 過濾ble rssi, 是否為場內beacon
       return false;
     if (navshareFunc.getTimestempDiff(this.timeStamp) > 1) {
       this.parameterConfig(); // 調整Node queue最大數量
-      console.log('每秒callback數' + this.callbackCount );
+      console.log('每秒callback數' + this.callbackCount);
       if (seqAndRssi !== undefined) {
         var std = this.getStdFromMultiLocationTrace();
         //console.log('多點定位位移標準差：'+ std);
@@ -379,7 +390,7 @@ export class IndoorFindSpace {
       if (this.lastBle != '' && ble[0].name === this.lastBle) {
         return false;
       } else {
-        this.lastBle = ble[0].name;   
+        this.lastBle = ble[0].name;
       }
     }
     return true;
@@ -388,7 +399,7 @@ export class IndoorFindSpace {
   startIndoorNavigation(ble) {
     var navshareFunc = this.navSharefunc;
     /*根據每秒callback數量對參數做調整 */
- 
+
     if (this.preProcessBLE(ble) == false)
       return;
 
@@ -439,7 +450,7 @@ export class IndoorFindSpaceAndroid {
     this.lastBle = '';
     this.timeStamp = Date.now();
     this.navSharefunc = new NavigationShareFunc();
-    this.carNavNowLocationPoint = new Point2D(0, 0);
+    this.carNavNowLocationPoint = new Point2D.Point2D(0, 0);
     console.log('====初始化室內導航====');
   }
 
@@ -461,10 +472,19 @@ export class IndoorFindSpaceAndroid {
       this.isSwitchGetBle = !(this.callbackCount < 20);
       if (this.callbackCount < 20) {
         if (this.callbackCount < 3) {
-          this.limitMaxQueueSize_Theshold = navshareFunc.getLimitBound(60, 8, this.thresCount);
+          this.limitMaxQueueSize_Theshold = Math.max(8, this.thresCount);
+          return
         } else {
-          this.limitMaxQueueSize_Theshold = navshareFunc.getLimitBound(60, 15, this.thresCount);
+          this.limitMaxQueueSize_Theshold = Math.max(15, this.thresCount);
+          return
         }
+      }
+      if (this.thresCount > 30) {
+        this.limitMaxQueueSize_Theshold = navshareFunc.getLimitBound(50, 30, this.thresCount);
+        return
+      } else {
+        this.limitMaxQueueSize_Theshold = 30;
+        return
       }
       //console.log(this.limitMaxQueueSize_Theshold);
     }
@@ -484,6 +504,27 @@ export class IndoorFindSpaceAndroid {
       return false;
     if (navshareFunc.navHashMap[ble[0].name].floor !== nowFloor)
       return false;
+
+    return true;
+  }
+
+  preProcessBLE(ble) {
+    var navshareFunc = this.navSharefunc;
+    if (this.filterBLE(ble) == false) // 過濾ble rssi, 是否為場內beacon
+      return false;
+    if (navshareFunc.getTimestempDiff(this.timeStamp) > 2) {
+      console.log('每秒callback數' + this.callbackCount);
+      if (this.callbackCount != 1) {
+        if (this.callbackCount > thresCount) {
+          this.thresCount = this.callbackCount;
+        } else {
+          this.thresCount = Math.round(this.thresCount * 0.8 + this.callbackCount * 0.2);
+        }
+      }
+      this.parameterConfig(); // 調整Node queue最大數量
+      this.callbackCount = 1;
+      this.timeStamp = Date.now()
+    }
     if (this.isSwitchGetBle) { // 是否啟動交替收 
       if (this.lastBle != '' && ble[0].name === this.lastBle) {
         return false;
@@ -494,10 +535,8 @@ export class IndoorFindSpaceAndroid {
     return true;
   }
 
-  isNodeConditions(seqAndRssi) {
+  isChangeNodeAlgorithm(seqAndRssi) {
     var navshareFunc = this.navSharefunc;
-    this.carNavNowLocationPoint = navshareFunc.getMultiLocationPoint(seqAndRssi);
-
     if (this.ansNav !== seqAndRssi[0].seqId) { // 跳點對象(排行榜第一)和當前點不一樣
       if (this.once) {
         this.ansNav = seqAndRssi[0].seqId;
@@ -505,6 +544,15 @@ export class IndoorFindSpaceAndroid {
       } else {
         let rankOfFirstNode = seqAndRssi[0].seqId;
         var nextN = navshareFunc.navSeqHashMap[this.ansNav].Next_N.split(",");
+        nextN.forEach(nextNodes => {
+
+
+        })
+
+
+
+
+
         if (nextN.includes(rankOfFirstNode)) {
           if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale) {
             this.ansNav = rankOfFirstNode;
@@ -532,34 +580,20 @@ export class IndoorFindSpaceAndroid {
 
   startIndoorNavigation(ble) {
     var navshareFunc = this.navSharefunc;
-    if (this.filterBLE(ble) == false) // 過濾ble rssi, 交替, 是否為場內beacon
+    /*根據每秒callback數量對參數做調整 */
+
+    if (this.preProcessBLE(ble) == false)
       return;
 
     if (navshareFunc.isLoadMap) {
+      this.callbackCount++;
       navshareFunc.addBle2Queue(navQueue, ble, this.limitMaxQueueSize_Theshold); // 將收到的ble塞進navQueue
-      var seqAndRssi = navshareFunc.mergeQueue2HashMap(navQueue);
-      seqAndRssi = navshareFunc.sortByKey(seqAndRssi, 'RSSI'); // sort navQueue named seqAndRssi(以能量排名)
-
-      /*根據每秒callback數量對參數做調整 */
-      if (navshareFunc.getTimestempDiff(this.timeStamp) > 2) {
-        this.parameterConfig(seqAndRssi); // 調整Node queue最大數量
-        console.log('callbackCount: ' + this.callbackCount);
-        this.callbackCount = 1;
-        if (this.callbackCount != 1) {
-          if (this.callbackCount > thresCount) {
-            this.thresCount = this.callbackCount;
-          } else {
-            this.thresCount = Math.round(this.thresCount * 0.8 + this.callbackCount * 0.2);
-          }
-        }
-        this.timeStamp = Date.now()
-      } else {
-        this.callbackCount++;
-      }
+      var tmp = navshareFunc.mergeQueue2HashMap(navQueue);
+      seqAndRssi = navshareFunc.sortByKey(tmp, 'RSSI'); // sort navQueue named seqAndRssi(以能量排名)
 
       /*跳點邏輯 */
       if (navQueue.length >= this.limitMaxQueueSize_Theshold) {
-        if (this.isNodeConditions(seqAndRssi) == true) {
+        if (this.isChangeNodeAlgorithm() == true) {
           this.once = false;
           this.updateCurrentNode();
           console.log('Rank:', seqAndRssi);
