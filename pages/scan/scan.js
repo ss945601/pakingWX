@@ -3,6 +3,7 @@ var SVG = require('../../utils/svg');
 var Navivation = require('../../utils/navigation');
 var svg;
 var nav;
+var alert = false;
 Page({
 
   /**
@@ -48,8 +49,7 @@ Page({
           }
         });
       },
-      complete: function() {
-      }
+      complete: function() {}
 
     });
   },
@@ -134,21 +134,37 @@ Page({
         })
       },
       fail: function(msg) {
-        var timer = setTimeout(function () {
+        var timer = setTimeout(function() {
           self.bleInit();
-        }, 10000);
+          if (alert == false){
+            alert = true;
+            wx.showModal({
+              name:'alert',
+              showCancel: false,
+              title: '提示',
+              content: '设备蓝牙未打开，请打开蓝牙功能',
+              success: function(res) {
+                if (res.confirm) {
+                  alert = false;
+                  //console.log('用户点击确定')
+                  // 退出小程序
+                }
+              }
+            });
+          }
+        }, 5000);
         self.setData({
           bleAdapterStatus: "初始化失败"
         })
       },
-      complete: function (res) {
-        var timer = setTimeout(function () {
+      complete: function(res) {
+        var timer = setTimeout(function() {
           var str = res.errMsg;
           console.log(str);
-          if (!(str.indexOf("fail") > -1)){
+          if (!(str.indexOf("fail") > -1)) {
             wx.closeBluetoothAdapter({
-              success: function (res) {
-                console.log('重啟') 
+              success: function(res) {
+                console.log('重啟')
                 self.bleInit();
               },
             })
@@ -180,7 +196,7 @@ Page({
           showCancel: false,
           title: '提示',
           content: '设备蓝牙未打开，请打开蓝牙功能',
-          success: function (res) {
+          success: function(res) {
             if (res.confirm) {
               //console.log('用户点击确定')
               // 退出小程序
