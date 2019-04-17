@@ -75,6 +75,7 @@ export class NavigationShareFunc {
         [sensorData[i].sensor_id]: sensorData[i]
       };
       if (nowFloor == sensorData[i].floor) {
+        sensorData[i].Next_N = sensorData[i].Next_N.split(',')
         var info = {
           [sensorData[i].seq_id]: sensorData[i]
         };
@@ -89,7 +90,7 @@ export class NavigationShareFunc {
     var edgeSize = 0
     var dis = 0
     for (var seq in this.navSeqHashMap) {
-      this.navSeqHashMap[seq].Next_N.split(',').forEach(nextN => {
+      this.navSeqHashMap[seq].Next_N.forEach(nextN => {
         dis += this.getDistanceBetweenPoints(this.getPointBySeqID(this.navSeqHashMap[seq].seq_id), this.getPointBySeqID(nextN))
         edgeSize++
       })
@@ -325,7 +326,7 @@ export class IndoorFindSpace {
         return true;
       } else {
         let rankOfFirstNode = seqAndRssi[0].seqId;
-        var nextN = navshareFunc.navSeqHashMap[this.ansNav].Next_N.split(",");
+        var nextN = navshareFunc.navSeqHashMap[this.ansNav].Next_N;
         if (nextN.includes(rankOfFirstNode)) {
           if (nextN.length == 1) {
             if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale) {
@@ -345,7 +346,7 @@ export class IndoorFindSpace {
         this.ansNav = seqAndRssi[0].seqId;
         console.log('刷點成功' + this.ansNav);
         return true;
-      } else if (navshareFunc.navSeqHashMap[seqAndRssi[0].seqId].Next_N.split(',').includes("" + seqAndRssi[1].seqId) || navshareFunc.navSeqHashMap[seqAndRssi[1].seqId].Next_N.split(',').includes("" + seqAndRssi[0].seqId)) {
+      } else if (navshareFunc.navSeqHashMap[seqAndRssi[0].seqId].Next_N.includes("" + seqAndRssi[1].seqId) || navshareFunc.navSeqHashMap[seqAndRssi[1].seqId].Next_N.includes("" + seqAndRssi[0].seqId)) {
         this.ansNav = seqAndRssi[0].seqId;
         console.log('刷點成功' + this.ansNav);
         return true;
@@ -537,37 +538,45 @@ export class IndoorFindSpaceAndroid {
 
   isChangeNodeAlgorithm(seqAndRssi) {
     var navshareFunc = this.navSharefunc;
-    if (this.ansNav !== seqAndRssi[0].seqId) { // 跳點對象(排行榜第一)和當前點不一樣
-      if (this.once) {
-        this.ansNav = seqAndRssi[0].seqId;
-        return true;
-      } else {
-        let rankOfFirstNode = seqAndRssi[0].seqId;
-        var nextN = navshareFunc.navSeqHashMap[this.ansNav].Next_N.split(",");
-        nextN.forEach(nextNodes => {
+    if (!this.once && seqAndRssi.length > 0) {
+      var ansPosition = navshareFunc.getPointBySeqID(this.ansNav);
+      var multiPosition = navshareFunc.getMultiLocationPoint(seqAndRssi);
+      //多點定位和現在點的距離
+      var dist = navshareFunc.getDistanceBetweenPoints(multiPosition, ansPosition);
+      var nextN = navshareFunc.navSeqHashMap[this.ansNav].Next_N;
+      var nextNodesize = nextN.length
+    }
 
 
-        })
+    if (this.once) {
+      this.ansNav = seqAndRssi[0].seqId;
+      return true;
+    } else {
+      let rankOfFirstNode = seqAndRssi[0].seqId;
+      
+      for (var i = 0; i < nextN.length; i++) {
+
+      }
 
 
 
 
 
-        if (nextN.includes(rankOfFirstNode)) {
-          if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale) {
-            this.ansNav = rankOfFirstNode;
-            return true;
-          }
+      if (nextN.includes(rankOfFirstNode)) {
+        if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale) {
+          this.ansNav = rankOfFirstNode;
+          return true;
         }
       }
     }
+
     //刷點條件
     if (!navshareFunc.arrayKeyContains(seqAndRssi, 'seqId', this.ansNav)) {
       if (seqAndRssi.length == 1) {
         this.ansNav = seqAndRssi[0].seqId;
         console.log('刷點成功' + this.ansNav);
         return true;
-      } else if (navshareFunc.navSeqHashMap[seqAndRssi[0].seqId].Next_N.split(',').includes("" + seqAndRssi[1].seqId) || navshareFunc.navSeqHashMap[seqAndRssi[1].seqId].Next_N.split(',').includes("" + seqAndRssi[0].seqId)) {
+      } else if (navshareFunc.navSeqHashMap[seqAndRssi[0].seqId].Next_N.includes("" + seqAndRssi[1].seqId) || navshareFunc.navSeqHashMap[seqAndRssi[1].seqId].Next_N.includes("" + seqAndRssi[0].seqId)) {
         this.ansNav = seqAndRssi[0].seqId;
         console.log('刷點成功' + this.ansNav);
         return true;
