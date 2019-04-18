@@ -268,6 +268,8 @@ export class IndoorFindSpace {
     this.isSwitchGetBle = false;
     this.lastBle = '';
     this.timeStamp = Date.now();
+    this.carSpeed = 0;
+    this.isParkingStop = true;
     this.multiLocationTraceQueue = new Array();
     this.navSharefunc = new NavigationShareFunc();
     console.log('====初始化室內導航====');
@@ -297,9 +299,16 @@ export class IndoorFindSpace {
       if (this.limitMaxQueueSize_Theshold > 30) {
         this.isSwitchGetBle = true;
       }
+      if (this.carSpeed < navshareFunc.n2nextNdis/2.5) {
+        this.isParkingStop = true;
+      }
+      else {
+        this.isParkingStop = false;
+      }
       this.scale = navshareFunc.getLimitBound(1.1, 1.4, this.scale);
       this.limitMaxQueueSize_Theshold = navshareFunc.getLimitBound(30, 60, this.limitMaxQueueSize_Theshold)
       //console.log(this.limitMaxQueueSize_Theshold);
+      console.info('車速：'+this.carSpeed + '加速：'+ this.isParkingStop);
     }
   }
 
@@ -337,22 +346,22 @@ export class IndoorFindSpace {
         var dist = navshareFunc.getDistanceBetweenPoints(multiPosition, rankOfFirstNodePosition);
         var lr = navshareFunc.floorDijkstra.findPathWithDijkstra(this.ansNav, rankOfFirstNode);
         var order = Number.MAX_SAFE_INTEGER
-        
+
         if (nextN.includes(rankOfFirstNode)) { // 正常跳點
           nextN.forEach(function(element) {
             var next2N = navshareFunc.navSeqHashMap[element].Next_N
             next2N.forEach(function(node) {
               var tmp = -1;
-              for (var i = 0; seqAndRssi[i];i++){
-                if (seqAndRssi[i].seqId == node) 
+              for (var i = 0; seqAndRssi[i]; i++) {
+                if (seqAndRssi[i].seqId == node)
                   tmp = i;
               }
-              if (tmp != -1 &&tmp < order) {
+              if (tmp != -1 && tmp < order) {
                 order = tmp;
               }
             });
           });
-         
+
           if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale && dist < navshareFunc.n2nextNdis / 2) {
             if (nextN.length == 1) {
               this.ansNav = rankOfFirstNode;
@@ -362,14 +371,14 @@ export class IndoorFindSpace {
             } else if (nextN.length > 1) {
               if (order < 3) {
                 this.ansNav = rankOfFirstNode;
-                console.log('雙向倍率' + dist + '<' + navshareFunc.n2nextNdis);
+                console.log('雙向倍率跳點' + dist + '<' + navshareFunc.n2nextNdis);
                 console.log('下下點:', order);
                 return true;
               }
             }
           }
         }
-        if (((lr == 2 && nextN.length == 1) || (lr == 1 && nextN.length > 1)) && dist < (navshareFunc.n2nextNdis / (nextN.length + 3))) {
+        if (((lr >= 2 && nextN.length == 1 && !this.isParkingStop) || (lr == 1 && nextN.length > 1)) && dist < (navshareFunc.n2nextNdis / (nextN.length + 3))) {
           this.ansNav = rankOfFirstNode;
           console.log('多點定位跳點:' + dist + '<' + navshareFunc.n2nextNdis + ',跳點長度：' + (lr.length - 1));
           return true;
@@ -418,7 +427,7 @@ export class IndoorFindSpace {
       this.parameterConfig(); // 調整Node queue最大數量
       console.log('每秒callback數' + this.callbackCount);
       if (seqAndRssi !== undefined) {
-        var std = this.getStdFromMultiLocationTrace();
+        this.carSpeed = this.getStdFromMultiLocationTrace();
         //console.log('多點定位位移標準差：'+ std);
       }
       this.callbackCount = 1;
