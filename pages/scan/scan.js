@@ -10,6 +10,7 @@ Page({
    * 页面的初始数据
    */
   data: {
+    systemInfo: {},
     bleStatus: "蓝牙未打开",
     bleAdapterStatus: "未初始化",
     bleChipInfo: {},
@@ -126,6 +127,7 @@ Page({
   bleInit: function() {
     //console.log('初始化蓝牙')
     let self = this
+
     wx.openBluetoothAdapter({
       success: function(res) {
         self.bleDisCovery()
@@ -136,10 +138,10 @@ Page({
       fail: function(msg) {
         var timer = setTimeout(function() {
           self.bleInit();
-          if (alert == false){
+          if (alert == false) {
             alert = true;
             wx.showModal({
-              name:'alert',
+              name: 'alert',
               showCancel: false,
               title: '提示',
               content: '设备蓝牙未打开，请打开蓝牙功能',
@@ -162,11 +164,24 @@ Page({
           var str = res.errMsg;
           console.log(str);
           if (!(str.indexOf("fail") > -1)) {
-            wx.closeBluetoothAdapter({
+            wx.getSystemInfo({
               success: function(res) {
-                console.log('重啟')
-                self.bleInit();
-              },
+                self.setData({
+                  systemInfo: res,
+                })
+                console.warn(res.platform)
+                if (res.platform == "devtools") {            
+                  //
+                } else if (res.platform == "ios") {            
+                  wx.closeBluetoothAdapter({
+                    success: function (res) {
+                      console.log('重啟')
+                      self.bleInit();
+                    },
+                  })
+                } else if (res.platform == "android") {            
+                }
+              }
             })
           }
         }, 10000);
