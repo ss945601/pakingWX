@@ -602,7 +602,8 @@ export class IndoorFindSpaceAndroid {
           this.ansNav = seqAndRssi[0].seqId;
           console.log("-----multi..searchAllEdge1..." + this.ansNav);
           return true;
-        } else if (navshareFunc.navSeqHashMap[seqAndRssi[0].seqId].Next_N.includes("" + seqAndRssi[1].seqId) || navshareFunc.navSeqHashMap[seqAndRssi[1].seqId].Next_N.includes("" + seqAndRssi[0].seqId)) {
+        } else if (navshareFunc.navSeqHashMap[seqAndRssi[0].seqId].Next_N.includes("" + seqAndRssi[1].seqId) ||
+          navshareFunc.navSeqHashMap[seqAndRssi[1].seqId].Next_N.includes("" + seqAndRssi[0].seqId)) {
           this.ansNav = seqAndRssi[0].seqId;
           console.log("-----multi..searchAllEdge2..." + this.ansNav);
           return true;
@@ -616,15 +617,17 @@ export class IndoorFindSpaceAndroid {
           //多點定位和下下一點距離
           var next2NodeLocateDis = navshareFunc.getDistanceBetweenPoints(multiPosition,
             navshareFunc.getPointBySeqID(navshareFunc.navSeqHashMap[nextN[i]].Next_N[0]))
-          if (navshareFunc.getTimestempDiff(this.switchTime) <= 5 && nextN[i] == rankOfFirstNode && navshareFunc.n2nextNdis / (1 + 0.1 * nextNodesize) > nextNodeLocateDis) {
+          if (navshareFunc.getTimestempDiff(this.switchTime) <= 5 && nextN[i] == rankOfFirstNode &&
+            navshareFunc.n2nextNdis / (1 + 0.1 * nextNodesize) > nextNodeLocateDis) {
             this.ansNav = nextN[i];
             console.info("-----Multi-1----- " + nextN[i])
             return true;
-          } else if (navshareFunc.getTimestempDiff(this.switchTime) > 5 && nextN[i] == rankOfFirstNode && navshareFunc.n2nextNdis / (1.1 + 0.1 * nextNodesize) > nextNodeLocateDis) {
+          } else if (navshareFunc.getTimestempDiff(this.switchTime) > 5 && nextN[i] == rankOfFirstNode &&
+            navshareFunc.n2nextNdis / (1.1 + 0.1 * nextNodesize) > nextNodeLocateDis) {
             this.ansNav = nextN[i];
             console.info("-----Multi-2----- " + nextN[i])
             return true;
-          } else if (navshareFunc.next2NodeLocateDis / 4 > nextNodeLocateDis) {
+          } else if (navshareFunc.n2nextNdis / 4 > nextNodeLocateDis) {
             this.ansNav = nextN[i];
             console.info("-----Multi-3----- " + nextN[i])
             return true;
@@ -641,7 +644,8 @@ export class IndoorFindSpaceAndroid {
           } else if (nextNodesize > 1 && rankOfFirstNode != this.ansNav &&
             navshareFunc.navSeqHashMap[nextN[i]].Next_N.includes(rankOfFirstNode) &&
             seqAndRssi[0].rssi > this.nowNodeValue['RSSI'] * 1.2) {
-            next2NodeLocateDis = navshareFunc.getDistanceBetweenPoints(multiPosition, navshareFunc.getPointBySeqID(rankOfFirstNode))
+            next2NodeLocateDis = navshareFunc.getDistanceBetweenPoints(multiPosition,
+              navshareFunc.getPointBySeqID(rankOfFirstNode))
             if (navshareFunc.n2nextNdis * 1.3 > next2NodeLocateDis) {
               this.ansNav = nextN[i];
               console.info("-----Multi-5----- " + nextN[i])
