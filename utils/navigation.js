@@ -7,7 +7,7 @@ var svg;
 var sensorData;
 var navQueue;
 var graphList = [];
-var nowFloor = '3F';
+var nowFloor = '';
 var seqAndRssi;
 var istestMode = false;
 const FIRST_LIMIT_QSIZE = 30;
@@ -35,8 +35,8 @@ export class NavigationShareFunc {
       console.log('取得場內資訊(sensorData)');
       console.log(sensorData);
       this.buildMapGraph();
-      this.buildNavSeqHashMap();
-      this.buildFloorDijkstra();
+      // this.buildNavSeqHashMap();
+      // this.buildFloorDijkstra();
       this.isLoadMap = true;
     } else {
       var pointer = this;
@@ -253,6 +253,8 @@ export class NavChangeFloor {
     this.limitMaxQueueSize_Theshold = 10;
   }
   filterBLE(ble) {
+    if (!this.navSharefunc.navHashMap[ble[0].name]) //非場內ble
+      return false;
     return true
   }
   isChangeFloor(ble) {
@@ -271,28 +273,34 @@ export class NavChangeFloor {
       while (this.floorQueue.length > this.limitMaxQueueSize_Theshold) {
         this.floorQueue.shift();
       }
-      if (this.floorQueue.length > 5){
-        this.floorQueue.forEach((floor, sensorId, rssi) => {
-          if (!this.floorArea.some(obj => obj.floor == floor)) {
+    
+      if (this.floorQueue.length > 5) {
+        this.floorQueue.forEach(floorQueueObj => {
+          if (!this.floorArea.some(obj => obj.floor == floorQueueObj.floor)) {
             var floorSet = {
-              'floor': floor,
+              'floor': floorQueueObj.floor,
               'RSSI': 0
             };
             this.floorArea.push(floorSet);
           }
-          this.floorArea[this.floorArea.findIndex(obj => obj.floor == floor)].RSSI += rssi
+          this.floorArea[this.floorArea.findIndex(obj => obj.floor == floorQueueObj.floor)].RSSI += floorQueueObj.RSSI
         })
         this.floorArea = this.navSharefunc.sortByKey(this.floorArea, 'RSSI')
-        if(nowFloor!=this.floorArea[0].floor){
+        if (nowFloor != this.floorArea[0].floor) {
           nowFloor = this.floorArea[0].floor
+          console.info("換樓層: ")
+          console.info(nowFloor)
+          this.floorArea = []
           return true
         }
 
       }
     }
+    this.floorArea = []
     return false
   }
   changeFloor() {
+
 
   }
 
@@ -553,8 +561,29 @@ export class IndoorFindSpaceAndroid {
     this.timeStamp = Date.now();
     this.switchTime = Date.now(); //點停留時間
     this.navSharefunc = new NavigationShareFunc();
+    this.changeFloorfunc = new NavChangeFloor(this.navSharefunc)
     this.carNavNowLocationPoint = new Point2D.Point2D(0, 0);
     console.log('====初始化室內導航====');
+  }
+  changeFloorinit() {
+    navQueue = [];
+    this.callbackCount = 0;
+    this.thresCount = 0;
+    this.x = 0;
+    this.y = 0;
+    this.scale = 1.1;
+    this.ansNav = '';
+    this.lastNav = '';
+    this.limitMaxQueueSize_Theshold = 0;
+    this.limitRSSI_Theshold = 0;
+    this.once = true; // 第一次收
+    this.isSwitchGetBle = false;
+    this.lastBle = '';
+    this.timeStamp = Date.now();
+    this.switchTime = Date.now(); //點停留時間
+    this.navSharefunc.buildNavSeqHashMap();
+    this.navSharefunc.buildFloorDijkstra();
+    this.carNavNowLocationPoint = new Point2D.Point2D(0, 0);
   }
 
 
@@ -714,9 +743,20 @@ export class IndoorFindSpaceAndroid {
     return false;
   }
 
+
   startIndoorNavigation(ble) {
     var navshareFunc = this.navSharefunc;
     /*根據每秒callback數量對參數做調整 */
+
+    if (this.changeFloorfunc.isChangeFloor(ble)) {
+      this.changeFloorinit()
+      navQueue = this.changeFloorfunc.floorQueue.filter(obj => {
+        obj.floor == nowFloor
+      })
+      console.info(navQueue)
+      this.changeFloorfunc.changeFloor()
+    }
+
 
     if (this.preProcessBLE(ble) == false)
       return;
