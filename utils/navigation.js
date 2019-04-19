@@ -262,10 +262,11 @@ export class NavChangeFloor {
       var name = ble[0].name;
       var sensorfloor = this.navSharefunc.navHashMap[name].floor
       var rssi = (parseInt(ble[0].RSSI) + 100);
+      var seqId = this.navSharefunc.navHashMap[name].seq_id
       if (name.length > 0) {
         var bleSet = {
           'floor': sensorfloor,
-          'sensorId': name,
+          'seqId': seqId,
           'RSSI': rssi
         };
         this.floorQueue.push(bleSet);
@@ -273,7 +274,7 @@ export class NavChangeFloor {
       while (this.floorQueue.length > this.limitMaxQueueSize_Theshold) {
         this.floorQueue.shift();
       }
-    
+
       if (this.floorQueue.length > 5) {
         this.floorQueue.forEach(floorQueueObj => {
           if (!this.floorArea.some(obj => obj.floor == floorQueueObj.floor)) {
@@ -318,6 +319,7 @@ export class IndoorFindSpace {
 
   constructor() {
     this.init();
+    this.shareClassInit();
   }
   init() {
     navQueue = new Array();
@@ -336,10 +338,17 @@ export class IndoorFindSpace {
     this.carSpeed = 0;
     this.isParkingStop = true;
     this.multiLocationTraceQueue = new Array();
-    this.navSharefunc = new NavigationShareFunc();
     console.log('====初始化室內導航====');
   }
-
+  shareClassInit() {
+    this.navSharefunc = new NavigationShareFunc();
+    this.changeFloorfunc = new NavChangeFloor(this.navSharefunc)
+  }
+  changeFloorinit() {
+    this.init();
+    this.navSharefunc.buildNavSeqHashMap();
+    this.navSharefunc.buildFloorDijkstra();
+  }
 
   updateCurrentNode() {
     var navshareFunc = this.navSharefunc;
@@ -511,6 +520,20 @@ export class IndoorFindSpace {
     var navshareFunc = this.navSharefunc;
     /*根據每秒callback數量對參數做調整 */
 
+    if (this.changeFloorfunc.isChangeFloor(ble)) {
+      this.changeFloorinit()
+      console.info(this.changeFloorfunc.floorQueue)
+      tmp = this.changeFloorfunc.floorQueue.filter(obj => {
+        return obj.floor == nowFloor
+      })
+      tmp.forEach(function(item) {
+        delete item['floor'];
+        navQueue.push(item);
+      });
+      console.info(navQueue)
+      this.changeFloorfunc.changeFloor()
+    }
+
     if (this.preProcessBLE(ble) == false)
       return;
 
@@ -543,6 +566,7 @@ export class IndoorFindSpaceAndroid {
 
   constructor() {
     this.init();
+    this.shareClassInit();
   }
   init() {
     navQueue = new Array();
@@ -560,32 +584,18 @@ export class IndoorFindSpaceAndroid {
     this.lastBle = '';
     this.timeStamp = Date.now();
     this.switchTime = Date.now(); //點停留時間
-    this.navSharefunc = new NavigationShareFunc();
-    this.changeFloorfunc = new NavChangeFloor(this.navSharefunc)
     this.carNavNowLocationPoint = new Point2D.Point2D(0, 0);
     console.log('====初始化室內導航====');
   }
+  shareClassInit() {
+    this.navSharefunc = new NavigationShareFunc();
+    this.changeFloorfunc = new NavChangeFloor(this.navSharefunc)
+  }
   changeFloorinit() {
-    navQueue = [];
-    this.callbackCount = 0;
-    this.thresCount = 0;
-    this.x = 0;
-    this.y = 0;
-    this.scale = 1.1;
-    this.ansNav = '';
-    this.lastNav = '';
-    this.limitMaxQueueSize_Theshold = 0;
-    this.limitRSSI_Theshold = 0;
-    this.once = true; // 第一次收
-    this.isSwitchGetBle = false;
-    this.lastBle = '';
-    this.timeStamp = Date.now();
-    this.switchTime = Date.now(); //點停留時間
+    this.init();
     this.navSharefunc.buildNavSeqHashMap();
     this.navSharefunc.buildFloorDijkstra();
-    this.carNavNowLocationPoint = new Point2D.Point2D(0, 0);
   }
-
 
   updateCurrentNode() {
     var navshareFunc = this.navSharefunc;
@@ -750,13 +760,17 @@ export class IndoorFindSpaceAndroid {
 
     if (this.changeFloorfunc.isChangeFloor(ble)) {
       this.changeFloorinit()
-      navQueue = this.changeFloorfunc.floorQueue.filter(obj => {
-        obj.floor == nowFloor
+      console.info(this.changeFloorfunc.floorQueue)
+      tmp = this.changeFloorfunc.floorQueue.filter(obj => {
+        return obj.floor == nowFloor
       })
+      tmp.forEach(function (item) {
+        delete item['floor'];
+        navQueue.push(item);
+      });
       console.info(navQueue)
       this.changeFloorfunc.changeFloor()
     }
-
 
     if (this.preProcessBLE(ble) == false)
       return;

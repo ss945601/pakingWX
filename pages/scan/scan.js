@@ -169,7 +169,6 @@ Page({
                 self.setData({
                   systemInfo: res,
                 })
-                console.warn(res.platform)
                 if (res.platform == "devtools") {            
                   //
                 } else if (res.platform == "ios") {            
