@@ -414,7 +414,24 @@ Page({
    */
   onShow: function() {
     // 初始化蓝牙
-    nav = new Navivation.IndoorFindSpace()
+    let self = this;
+    wx.getSystemInfo({
+      success: function (res) {
+        self.setData({
+          systemInfo: res,
+        })
+        if (res.platform == "devtools") {
+          nav = new Navivation.IndoorFindSpace()
+          console.log('啟動 Ios 室內演算法')
+        } else if (res.platform == "ios") {
+          nav = new Navivation.IndoorFindSpace()
+          console.log('啟動 Ios 室內演算法')
+        } else if (res.platform == "android") {
+          nav = new Navivation.IndoorFindSpaceAndroid()
+          console.log('啟動 Android 室內演算法')
+        }
+      }
+    })
     this.bleInit();
   },
 
