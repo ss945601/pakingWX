@@ -9,7 +9,7 @@ var navQueue;
 var graphList = [];
 var nowFloor = '';
 var seqAndRssi;
-var istestMode = false;
+var istestMode = true;
 const FIRST_LIMIT_QSIZE = 30;
 
 export class NavigationShareFunc {
@@ -329,7 +329,7 @@ export class IndoorFindSpace {
     this.scale = 1.2;
     this.ansNav = '';
     this.lastNav = '';
-    this.limitMaxQueueSize_Theshold = 0;
+    this.limitMaxQueueSize_Theshold = FIRST_LIMIT_QSIZE;
     this.limitRSSI_Theshold = 0;
     this.once = true; // 第一次收
     this.isSwitchGetBle = false;
@@ -483,7 +483,6 @@ export class IndoorFindSpace {
     while (this.multiLocationTraceQueue.length > 5) {
       this.multiLocationTraceQueue.shift();
     }
-    console.log(this.multiLocationTraceQueue);
     var distArray = new Array();
     this.multiLocationTraceQueue.forEach(function(element) {
       distArray.push(navshareFunc.getDistanceBetweenPoints(element, multiPosition));
@@ -522,34 +521,32 @@ export class IndoorFindSpace {
 
     if (this.changeFloorfunc.isChangeFloor(ble)) {
       this.changeFloorinit()
-      console.info(this.changeFloorfunc.floorQueue)
+      
       var tmp = JSON.parse(JSON.stringify(this.changeFloorfunc.floorQueue));
       tmp = tmp.filter(obj =>obj.floor == nowFloor)
       tmp.forEach(function(item) {
         delete item['floor'];
         navQueue.push(item);
       });
-      console.info(this.changeFloorfunc.floorQueue)
       this.changeFloorfunc.changeFloor()
     }
 
-    if (this.preProcessBLE(ble) == false)
-      return;
-
-    if (navshareFunc.isLoadMap) {
-      this.callbackCount++;
-      navshareFunc.addBle2Queue(navQueue, ble, this.limitMaxQueueSize_Theshold); // 將收到的ble塞進navQueue
-      var tmp = navshareFunc.mergeQueue2HashMap(navQueue);
-      seqAndRssi = navshareFunc.sortByKey(tmp, 'RSSI'); // sort navQueue named seqAndRssi(以能量排名)
-      /*跳點邏輯 */
-      if (navQueue.length >= this.limitMaxQueueSize_Theshold) {
-        if (this.isChangeNodeAlgorithm() == true) {
-          this.once = false;
-          this.updateCurrentNode();
-          console.log('Rank:', seqAndRssi);
+    if (this.preProcessBLE(ble))
+    {
+      if (navshareFunc.isLoadMap) {
+        this.callbackCount++;
+        navshareFunc.addBle2Queue(navQueue, ble, this.limitMaxQueueSize_Theshold); // 將收到的ble塞進navQueue
+        var tmp = navshareFunc.mergeQueue2HashMap(navQueue);
+        seqAndRssi = navshareFunc.sortByKey(tmp, 'RSSI'); // sort navQueue named seqAndRssi(以能量排名)
+        /*跳點邏輯 */
+        if (navQueue.length >= this.limitMaxQueueSize_Theshold) {
+          if (this.isChangeNodeAlgorithm() == true) {
+            this.once = false;
+            this.updateCurrentNode();
+            console.log('Rank:', seqAndRssi);
+          }
         }
       }
-
     }
   }
 
@@ -576,7 +573,7 @@ export class IndoorFindSpaceAndroid {
     this.scale = 1.1;
     this.ansNav = '';
     this.lastNav = '';
-    this.limitMaxQueueSize_Theshold = 0;
+    this.limitMaxQueueSize_Theshold = FIRST_LIMIT_QSIZE;
     this.limitRSSI_Theshold = 0;
     this.once = true; // 第一次收
     this.isSwitchGetBle = false;
@@ -760,14 +757,13 @@ export class IndoorFindSpaceAndroid {
     if (this.changeFloorfunc.isChangeFloor(ble)) {
       this.changeFloorinit()
       console.info(this.changeFloorfunc.floorQueue)
-      var tmp = this.changeFloorfunc.floorQueue.filter(obj => {
-        return obj.floor == nowFloor
-      })
+      var tmp = JSON.parse(JSON.stringify(this.changeFloorfunc.floorQueue));
+      tmp = tmp.filter(obj => obj.floor == nowFloor)
       tmp.forEach(function (item) {
         delete item['floor'];
         navQueue.push(item);
       });
-      console.info(navQueue)
+      console.info(this.changeFloorfunc.floorQueue)
       this.changeFloorfunc.changeFloor()
     }
 
