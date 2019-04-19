@@ -6,7 +6,6 @@ var Point2D = require('graph/point2D.js')
 var svg;
 var sensorData;
 var navQueue;
-var floorQueue;
 var graphList = [];
 var nowFloor = '3F';
 var seqAndRssi;
@@ -243,6 +242,64 @@ export class NavigationShareFunc {
 
 }
 
+export class NavChangeFloor {
+  constructor(navSharefunc) {
+    this.navSharefunc = navSharefunc
+    this.init()
+  }
+  init() {
+    this.floorQueue = new Array()
+    this.floorArea = new Array() //樓層rssi總和
+    this.limitMaxQueueSize_Theshold = 10;
+  }
+  filterBLE(ble) {
+    return true
+  }
+  isChangeFloor(ble) {
+    if (this.filterBLE(ble)) {
+      var name = ble[0].name;
+      var sensorfloor = this.navSharefunc.navHashMap[name].floor
+      var rssi = (parseInt(ble[0].RSSI) + 100);
+      if (name.length > 0) {
+        var bleSet = {
+          'floor': sensorfloor,
+          'sensorId': name,
+          'RSSI': rssi
+        };
+        this.floorQueue.push(bleSet);
+      }
+      while (this.floorQueue.length > this.limitMaxQueueSize_Theshold) {
+        this.floorQueue.shift();
+      }
+      if (this.floorQueue.length > 5){
+        this.floorQueue.forEach((floor, sensorId, rssi) => {
+          if (!this.floorArea.some(obj => obj.floor == floor)) {
+            var floorSet = {
+              'floor': floor,
+              'RSSI': 0
+            };
+            this.floorArea.push(floorSet);
+          }
+          this.floorArea[this.floorArea.findIndex(obj => obj.floor == floor)].RSSI += rssi
+        })
+        this.floorArea = this.navSharefunc.sortByKey(this.floorArea, 'RSSI')
+        if(nowFloor!=this.floorArea[0].floor){
+          nowFloor = this.floorArea[0].floor
+          return true
+        }
+
+      }
+    }
+    return false
+  }
+  changeFloor() {
+
+  }
+
+
+
+}
+
 
 export class IndoorFindSpace {
   /**
@@ -299,16 +356,15 @@ export class IndoorFindSpace {
       if (this.limitMaxQueueSize_Theshold > 30) {
         this.isSwitchGetBle = true;
       }
-      if (this.carSpeed < navshareFunc.n2nextNdis/3.8) {
+      if (this.carSpeed < navshareFunc.n2nextNdis / 3.8) {
         this.isParkingStop = true;
-      }
-      else {
+      } else {
         this.isParkingStop = false;
       }
       this.scale = navshareFunc.getLimitBound(1.1, 1.2, this.scale);
       this.limitMaxQueueSize_Theshold = navshareFunc.getLimitBound(30, 60, this.limitMaxQueueSize_Theshold)
       //console.log(this.limitMaxQueueSize_Theshold);
-      console.info('車速：'+this.carSpeed + '停止：'+ this.isParkingStop);
+      console.info('車速：' + this.carSpeed + '停止：' + this.isParkingStop);
     }
   }
 
@@ -362,7 +418,7 @@ export class IndoorFindSpace {
             });
           });
 
-          if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale && dist < navshareFunc.n2nextNdis ) {
+          if (seqAndRssi.length >= 2 && seqAndRssi[0].RSSI > seqAndRssi[1].RSSI * this.scale && dist < navshareFunc.n2nextNdis) {
             if (nextN.length == 1) {
               this.ansNav = rankOfFirstNode;
               console.warn('單向倍率跳點' + dist + '<' + navshareFunc.n2nextNdis);
