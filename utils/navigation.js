@@ -523,14 +523,13 @@ export class IndoorFindSpace {
     if (this.changeFloorfunc.isChangeFloor(ble)) {
       this.changeFloorinit()
       console.info(this.changeFloorfunc.floorQueue)
-      tmp = this.changeFloorfunc.floorQueue.filter(obj => {
-        return obj.floor == nowFloor
-      })
+      var tmp = JSON.parse(JSON.stringify(this.changeFloorfunc.floorQueue));
+      tmp = tmp.filter(obj =>obj.floor == nowFloor)
       tmp.forEach(function(item) {
         delete item['floor'];
         navQueue.push(item);
       });
-      console.info(navQueue)
+      console.info(this.changeFloorfunc.floorQueue)
       this.changeFloorfunc.changeFloor()
     }
 
@@ -761,7 +760,7 @@ export class IndoorFindSpaceAndroid {
     if (this.changeFloorfunc.isChangeFloor(ble)) {
       this.changeFloorinit()
       console.info(this.changeFloorfunc.floorQueue)
-      tmp = this.changeFloorfunc.floorQueue.filter(obj => {
+      var tmp = this.changeFloorfunc.floorQueue.filter(obj => {
         return obj.floor == nowFloor
       })
       tmp.forEach(function (item) {
