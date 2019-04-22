@@ -9,7 +9,7 @@ var navQueue;
 var graphList = [];
 var nowFloor = '';
 var seqAndRssi;
-var istestMode = true;
+var istestMode = false;
 const FIRST_LIMIT_QSIZE = 30;
 
 export class NavigationShareFunc {
@@ -248,13 +248,15 @@ export class NavChangeFloor {
     this.init()
   }
   init() {
+    nowFloor = '';
     this.floorQueue = new Array()
     this.floorArea = new Array() //樓層rssi總和
     this.limitMaxQueueSize_Theshold = 10;
   }
-  filterBLE(ble) {
-    if (!this.navSharefunc.navHashMap[ble[0].name]) //非場內ble
+  filterBLE(ble) { 
+    if (!this.navSharefunc.navHashMap[ble[0].name]){
       return false;
+    }
     return true
   }
   isChangeFloor(ble) {
@@ -521,7 +523,7 @@ export class IndoorFindSpace {
 
     if (this.changeFloorfunc.isChangeFloor(ble)) {
       this.changeFloorinit()
-      
+      console.info('初始化樓層資訊')
       var tmp = JSON.parse(JSON.stringify(this.changeFloorfunc.floorQueue));
       tmp = tmp.filter(obj =>obj.floor == nowFloor)
       tmp.forEach(function(item) {
