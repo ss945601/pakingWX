@@ -1,9 +1,9 @@
 var DbRequest = require('../dbRequest.js');
 var dbr;
 var sensorInfo = { 
-  init:function(){
+  init:function(post){
     dbr = new DbRequest.getDataFromDB();
-    dbr.floorSensorHttpRequest("000001");
+    dbr.floorSensorHttpRequest(post);
   },
   get Data() {
     return this._sensorData;
@@ -13,7 +13,22 @@ var sensorInfo = {
   }
   
 }
-export {sensorInfo};
+
+var spaceInfo = {
+  init: function (post) {
+    dbr = new DbRequest.getDataFromDB();
+    dbr.spaceSensorHttpRequest(post);
+  },
+  get Data() {
+    return this._spaceData;
+  },
+  set Data(val) {
+    this._spaceData = val;
+  }
+
+}
+
+export {sensorInfo, spaceInfo};
 
 
 

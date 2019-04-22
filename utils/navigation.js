@@ -5,11 +5,13 @@ var SensorDataModel = require('model/sensorDataModel.js')
 var Point2D = require('graph/point2D.js')
 var svg;
 var sensorData;
+var spaceData;
 var navQueue;
 var graphList = [];
 var nowFloor = '';
 var seqAndRssi;
 var istestMode = false;
+var garageId = '000001'
 const FIRST_LIMIT_QSIZE = 30;
 
 export class NavigationShareFunc {
@@ -25,16 +27,21 @@ export class NavigationShareFunc {
     this.isLoadMap = false;
     this.navHashMap = new Array();
     this.navSeqHashMap = new Array();
+    this.pSpaceHashMap = new Array();
     this.n2nextNdis = 0
     this.initMapGraph();
   }
   initMapGraph() {
-    SensorDataModel.sensorInfo.init();
+    SensorDataModel.sensorInfo.init(garageId);
+    SensorDataModel.spaceInfo.init(garageId);
     sensorData = SensorDataModel.sensorInfo.Data;
+    spaceData = SensorDataModel.spaceInfo.Data;
     if (sensorData !== undefined) {
-      console.log('取得場內資訊(sensorData)');
+      console.log('取得場內資訊(sensorData,spaceData)');
       console.log(sensorData);
+      console.log(spaceData); 
       this.buildMapGraph();
+      this.buildSpaceMap();
       // this.buildNavSeqHashMap();
       // this.buildFloorDijkstra();
       this.isLoadMap = true;
@@ -70,6 +77,18 @@ export class NavigationShareFunc {
     // console.log(map.getEdge())
     // dij.changeCost(1, 3, 3);
   }
+
+  buildSpaceMap(){
+    for (var i = 0; spaceData[i]; i++) {
+      var info = {
+        [spaceData[i].SensorID]: spaceData[i]
+      };
+      this.pSpaceHashMap = Object.assign({}, this.pSpaceHashMap , info);
+    }
+    console.log('建立全域Space字典(pSpaceHashMap)');
+    console.log(this.pSpaceHashMap);
+  }
+
   buildNavSeqHashMap() {
     for (var i = 0; sensorData[i]; i++) {
       var info = {
